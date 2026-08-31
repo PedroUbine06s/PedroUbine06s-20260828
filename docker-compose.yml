@@ -1,0 +1,45 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: gestao-db
+    environment:
+      POSTGRES_USER: gestao
+      POSTGRES_PASSWORD: gestao123        # TODO: mover para .env antes de publicar o repo
+      POSTGRES_DB: gestao_colaboradores
+    ports:
+      - "5432:5432"
+    volumes:
+      - gestao-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gestao -d gestao_colaboradores"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: gestao-api
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Default: "Host=db;Port=5432;Database=gestao_colaboradores;Username=gestao;Password=gestao123"
+      Jwt__Secret: "troque-este-segredo-por-um-valor-de-32+chars-em-env"   # TODO: .env
+      Jwt__ExpiracaoMinutos: "60"
+      Jwt__Emissor: "GestaoColaboradores"
+    ports:
+      - "5000:8080"
+
+  # TODO (opcional): frontend servido por nginx
+  # web:
+  #   build: ./frontend
+  #   ports:
+  #     - "4200:80"
+  #   depends_on:
+  #     - api
+
+volumes:
+  gestao-pgdata:

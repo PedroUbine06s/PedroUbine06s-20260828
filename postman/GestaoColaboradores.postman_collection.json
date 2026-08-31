@@ -1,0 +1,171 @@
+{
+  "info": {
+    "name": "Gestão de Colaboradores e Unidades",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login (salva o token automaticamente)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    pm.environment.set('token', pm.response.json().token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"login\": \"admin\",\n  \"senha\": \"admin123\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Usuários",
+      "item": [
+        {
+          "name": "Listar (todos)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/usuarios" }
+        },
+        {
+          "name": "Listar por status (requisito)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/usuarios?ativo=true" }
+        },
+        {
+          "name": "Criar",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/usuarios",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo\": \"USR-010\",\n  \"login\": \"maria.silva\",\n  \"senha\": \"senha123\",\n  \"ativo\": true\n}"
+            }
+          }
+        },
+        {
+          "name": "Atualizar (somente senha e status)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/usuarios/2",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"senha\": \"novaSenha123\",\n  \"ativo\": false\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Unidades",
+      "item": [
+        {
+          "name": "Listar (com colaboradores — requisito)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/unidades" }
+        },
+        {
+          "name": "Criar",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/unidades",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo\": \"UNI-010\",\n  \"nome\": \"Filial Norte\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Inativar",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/unidades/1",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Matriz\",\n  \"ativo\": false\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Colaboradores",
+      "item": [
+        {
+          "name": "Listar",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/colaboradores" }
+        },
+        {
+          "name": "Criar",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/colaboradores",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo\": \"COL-010\",\n  \"nome\": \"Maria Silva\",\n  \"codigoUnidade\": \"UNI-001\",\n  \"codigoUsuario\": \"USR-010\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Criar em unidade INATIVA (esperado: 422)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/colaboradores",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo\": \"COL-011\",\n  \"nome\": \"João Souza\",\n  \"codigoUnidade\": \"UNI-002\",\n  \"codigoUsuario\": \"USR-010\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Criar com código duplicado (esperado: 409)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/colaboradores",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo\": \"COL-010\",\n  \"nome\": \"Duplicado\",\n  \"codigoUnidade\": \"UNI-001\",\n  \"codigoUsuario\": \"USR-010\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Remover",
+          "request": { "method": "DELETE", "url": "{{baseUrl}}/api/v1/colaboradores/1" }
+        },
+        {
+          "name": "Sem token (esperado: 401)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/colaboradores"
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [{ "key": "baseUrl", "value": "http://localhost:5000" }]
+}
