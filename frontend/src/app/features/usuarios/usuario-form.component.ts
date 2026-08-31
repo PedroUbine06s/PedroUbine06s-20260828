@@ -22,7 +22,7 @@ const MINIMO_SENHA = 8;
   imports: [ReactiveFormsModule, ModalModule, ButtonModule, InputModule, CheckboxModule],
   template: `
     <cds-modal [open]="aberto()" size="sm" (close)="cancelado.emit()">
-      <cds-modal-header (closeSelect)="cancelado.emit()">
+      <cds-modal-header closeLabel="Fechar" (closeSelect)="cancelado.emit()">
         <h3 cdsModalHeaderHeading>{{ usuario() ? 'Editar usuário' : 'Novo usuário' }}</h3>
       </cds-modal-header>
 

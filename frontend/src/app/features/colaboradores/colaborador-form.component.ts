@@ -1,4 +1,14 @@
-import { Component, computed, effect, inject, input, output, signal } from '@angular/core';
+import {
+  Component,
+  Injector,
+  afterNextRender,
+  computed,
+  effect,
+  inject,
+  input,
+  output,
+  signal
+} from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { forkJoin } from 'rxjs';
 import { ButtonModule } from 'carbon-components-angular/button';
@@ -28,7 +38,7 @@ const TAMANHO_MAXIMO = 100;
   imports: [ReactiveFormsModule, ModalModule, ButtonModule, InputModule, SelectModule],
   template: `
     <cds-modal [open]="aberto()" size="sm" (close)="cancelado.emit()">
-      <cds-modal-header (closeSelect)="cancelado.emit()">
+      <cds-modal-header closeLabel="Fechar" (closeSelect)="cancelado.emit()">
         <h3 cdsModalHeaderHeading>
           {{ colaborador() ? 'Editar colaborador' : 'Novo colaborador' }}
         </h3>
@@ -44,8 +54,15 @@ const TAMANHO_MAXIMO = 100;
             <input cdsText formControlName="nome" autocomplete="off" />
           </cds-label>
 
-          <cds-select formControlName="unidadeId" label="Unidade">
-            <option value="" disabled>Selecione uma unidade</option>
+          <cds-select
+            formControlName="unidadeId"
+            label="Unidade"
+            [helperText]="
+              semUnidadeAtiva()
+                ? 'Nenhuma unidade ativa. Ative uma unidade antes de cadastrar colaboradores.'
+                : ''
+            ">
+            <option value="">Selecione uma unidade</option>
             @for (u of unidadesSelecionaveis(); track u.id) {
               <option [value]="u.id">
                 {{ u.nome }}{{ u.ativo ? '' : ' (inativa)' }}
@@ -58,7 +75,7 @@ const TAMANHO_MAXIMO = 100;
               formControlName="usuarioId"
               label="Usuário"
               helperText="Cada usuário pertence a um único colaborador.">
-              <option value="" disabled>Selecione um usuário</option>
+              <option value="">Selecione um usuário</option>
               @for (u of usuarios(); track u.id) {
                 <option [value]="u.id">{{ u.login }} ({{ u.codigo }})</option>
               }
@@ -85,6 +102,7 @@ export class ColaboradorFormComponent {
   private readonly unidadesService = inject(UnidadesService);
   private readonly usuariosService = inject(UsuariosService);
   private readonly notificacao = inject(NotificacaoService);
+  private readonly injector = inject(Injector);
 
   /** `null` significa criação. */
   readonly colaborador = input<Colaborador | null>(null);
@@ -113,6 +131,11 @@ export class ColaboradorFormComponent {
     return inativa ? [inativa, ...ativas] : ativas;
   });
 
+  /** Só bloqueia a criação: na edição a unidade atual continua disponível. */
+  readonly semUnidadeAtiva = computed(
+    () => !this.colaborador() && this.unidadesSelecionaveis().length === 0
+  );
+
   readonly form = this.fb.nonNullable.group({
     nome: ['', Validators.required],
     unidadeId: ['', Validators.required],
@@ -135,6 +158,7 @@ export class ColaboradorFormComponent {
       usuario.setValidators(atual ? [] : [Validators.required]);
       usuario.updateValueAndValidity();
     });
+
 
     this.carregarOpcoes();
   }
@@ -166,6 +190,14 @@ export class ColaboradorFormComponent {
     });
   }
 
+  /** Só reaplica se a pessoa ainda não tiver escolhido outra unidade na tela. */
+  private sincronizarUnidadeSelecionada(): void {
+    const atual = this.colaborador();
+    const unidade = this.form.controls.unidadeId;
+
+    if (atual && unidade.pristine) unidade.setValue(atual.unidadeId);
+  }
+
   private carregarOpcoes(): void {
     forkJoin({
       unidades: this.unidadesService.listar({ tamanho: TAMANHO_MAXIMO }),
@@ -174,6 +206,14 @@ export class ColaboradorFormComponent {
       next: ({ unidades, usuarios }) => {
         this.unidades.set(unidades.itens);
         this.usuarios.set(usuarios.itens);
+
+        // O accessor do <select> escreve o valor no DOM antes de as <option>
+        // existirem, e o navegador descarta um valor sem option correspondente:
+        // a tela mostraria "Selecione uma unidade" com o formulário já apontando
+        // para a unidade certa. Reaplicar depois da renderização realinha os dois.
+        afterNextRender(() => this.sincronizarUnidadeSelecionada(), {
+          injector: this.injector
+        });
       },
       error: () => {
         /* O interceptor já notificou; os selects ficam vazios. */

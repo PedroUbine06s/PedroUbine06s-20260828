@@ -11,7 +11,12 @@ import { NotificacoesComponent } from './shared/notificacoes.component';
   imports: [RouterOutlet, UIShellModule, NotificacoesComponent],
   template: `
     @if (auth.estaLogado()) {
-      <cds-header name="Gestão de Colaboradores" [route]="['/colaboradores']" [useRouter]="true">
+      <!-- brand vazio: o padrão do cds-header é "IBM", que não é a marca deste portal. -->
+      <cds-header
+        brand=""
+        name="Gestão de Colaboradores"
+        [route]="['/colaboradores']"
+        [useRouter]="true">
         <cds-header-navigation>
           @for (item of navegacao; track item.rota) {
             <cds-header-item

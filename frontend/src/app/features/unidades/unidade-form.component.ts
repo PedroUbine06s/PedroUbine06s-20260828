@@ -19,7 +19,7 @@ import { UnidadesService } from './unidades.service';
   imports: [ReactiveFormsModule, ModalModule, ButtonModule, InputModule, CheckboxModule],
   template: `
     <cds-modal [open]="aberto()" size="sm" (close)="cancelado.emit()">
-      <cds-modal-header (closeSelect)="cancelado.emit()">
+      <cds-modal-header closeLabel="Fechar" (closeSelect)="cancelado.emit()">
         <h3 cdsModalHeaderHeading>{{ unidade() ? 'Editar unidade' : 'Nova unidade' }}</h3>
       </cds-modal-header>
 

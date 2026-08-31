@@ -14,7 +14,7 @@ import { ModalModule } from 'carbon-components-angular/modal';
   imports: [ModalModule, ButtonModule],
   template: `
     <cds-modal [open]="aberto()" size="sm" theme="danger" (close)="cancelar.emit()">
-      <cds-modal-header (closeSelect)="cancelar.emit()">
+      <cds-modal-header closeLabel="Fechar" (closeSelect)="cancelar.emit()">
         <h3 cdsModalHeaderHeading>{{ titulo() }}</h3>
       </cds-modal-header>
 
