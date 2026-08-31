@@ -1,4 +1,6 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { ActivatedRoute, Router } from '@angular/router';
 import { ButtonModule } from 'carbon-components-angular/button';
 import { LoadingModule } from 'carbon-components-angular/loading';
 import { Pagina, Unidade } from '../../core/models/modelos';
@@ -6,6 +8,7 @@ import { NotificacaoService } from '../../core/services/notificacao.service';
 import { PaginacaoComponent } from '../../shared/paginacao.component';
 import { StatusBadgeComponent } from '../../shared/status-badge.component';
 import { UnidadeFormComponent } from './unidade-form.component';
+import { paginaDaUrl } from '../../core/services/parametros';
 import { UnidadesService } from './unidades.service';
 
 @Component({
@@ -150,9 +153,18 @@ export class UnidadesListaComponent {
   private readonly service = inject(UnidadesService);
   private readonly notificacao = inject(NotificacaoService);
 
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+
   readonly dados = signal<Pagina<Unidade> | null>(null);
   readonly carregando = signal(true);
-  readonly pagina = signal(1);
+
+  private readonly parametros = toSignal(this.route.queryParamMap, {
+    initialValue: this.route.snapshot.queryParamMap
+  });
+
+  /** A página vive na URL: F5 e o botão voltar preservam o lugar na listagem. */
+  readonly pagina = computed(() => paginaDaUrl(this.parametros().get('pagina')));
 
   /** Id da unidade com a linha de colaboradores aberta, se houver. */
   readonly expandida = signal<string | null>(null);
@@ -164,7 +176,10 @@ export class UnidadesListaComponent {
   readonly unidades = computed(() => this.dados()?.itens ?? []);
 
   constructor() {
-    this.carregar();
+    effect(() => {
+      this.pagina();
+      this.carregar();
+    });
   }
 
   alternarExpansao(id: string): void {
@@ -172,8 +187,11 @@ export class UnidadesListaComponent {
   }
 
   irParaPagina(pagina: number): void {
-    this.pagina.set(pagina);
-    this.carregar();
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { pagina: pagina === 1 ? null : pagina },
+      queryParamsHandling: 'merge'
+    });
   }
 
   abrirCriacao(): void {

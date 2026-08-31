@@ -1,4 +1,6 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { ActivatedRoute, Router } from '@angular/router';
 import { ButtonModule } from 'carbon-components-angular/button';
 import { LoadingModule } from 'carbon-components-angular/loading';
 import { Colaborador, Pagina } from '../../core/models/modelos';
@@ -6,6 +8,7 @@ import { NotificacaoService } from '../../core/services/notificacao.service';
 import { ConfirmacaoComponent } from '../../shared/confirmacao.component';
 import { PaginacaoComponent } from '../../shared/paginacao.component';
 import { ColaboradorFormComponent } from './colaborador-form.component';
+import { paginaDaUrl } from '../../core/services/parametros';
 import { ColaboradoresService } from './colaboradores.service';
 
 @Component({
@@ -116,9 +119,21 @@ export class ColaboradoresListaComponent {
   private readonly service = inject(ColaboradoresService);
   private readonly notificacao = inject(NotificacaoService);
 
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+
   readonly dados = signal<Pagina<Colaborador> | null>(null);
   readonly carregando = signal(true);
-  readonly pagina = signal(1);
+
+  private readonly parametros = toSignal(this.route.queryParamMap, {
+    initialValue: this.route.snapshot.queryParamMap
+  });
+
+  /**
+   * A página vive na URL, não num signal local: recarregar, voltar pelo navegador e
+   * compartilhar o link preservam o lugar na listagem.
+   */
+  readonly pagina = computed(() => paginaDaUrl(this.parametros().get('pagina')));
 
   readonly formAberto = signal(false);
   readonly emEdicao = signal<Colaborador | null>(null);
@@ -129,12 +144,24 @@ export class ColaboradoresListaComponent {
   readonly colaboradores = computed(() => this.dados()?.itens ?? []);
 
   constructor() {
-    this.carregar();
+    // Recarrega sempre que a página da URL muda — inclusive pelo botão voltar.
+    effect(() => {
+      this.pagina();
+      this.carregar();
+    });
   }
 
   irParaPagina(pagina: number): void {
-    this.pagina.set(pagina);
-    this.carregar();
+    this.navegarParaPagina(pagina);
+  }
+
+  /** Página 1 sai da URL para não sujar o link com o valor padrão. */
+  private navegarParaPagina(pagina: number): void {
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { pagina: pagina === 1 ? null : pagina },
+      queryParamsHandling: 'merge'
+    });
   }
 
   abrirCriacao(): void {
@@ -174,11 +201,12 @@ export class ColaboradoresListaComponent {
         this.emRemocao.set(null);
 
         // Ao esvaziar a última página, recua uma para não exibir uma lista vazia.
+        // Navegar já dispara o efeito que recarrega; sem isso, recarrega aqui mesmo.
         if (this.colaboradores().length === 1 && this.pagina() > 1) {
-          this.pagina.update(p => p - 1);
+          this.navegarParaPagina(this.pagina() - 1);
+        } else {
+          this.carregar();
         }
-
-        this.carregar();
       },
       error: () => {
         this.removendo.set(false);

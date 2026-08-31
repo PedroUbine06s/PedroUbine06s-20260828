@@ -13,3 +13,15 @@ export function paramsDePaginacao(p: ParametrosPaginacao = {}): HttpParams {
 
   return params;
 }
+
+/**
+ * Lê o número de página vindo da URL.
+ *
+ * A URL é digitável, então qualquer coisa pode chegar aqui: texto, zero, negativo. Em vez
+ * de propagar isso para a API, valores inválidos caem na primeira página.
+ */
+export function paginaDaUrl(valor: string | null): number {
+  const numero = Number(valor);
+
+  return Number.isInteger(numero) && numero > 0 ? numero : 1;
+}

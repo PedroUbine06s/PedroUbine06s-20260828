@@ -1,10 +1,13 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { ActivatedRoute, Router } from '@angular/router';
 import { ButtonModule } from 'carbon-components-angular/button';
 import { LoadingModule } from 'carbon-components-angular/loading';
 import { Pagina, Usuario } from '../../core/models/modelos';
 import { PaginacaoComponent } from '../../shared/paginacao.component';
 import { StatusBadgeComponent } from '../../shared/status-badge.component';
 import { UsuarioFormComponent } from './usuario-form.component';
+import { paginaDaUrl } from '../../core/services/parametros';
 import { UsuariosService } from './usuarios.service';
 
 type Filtro = 'todos' | 'ativos' | 'inativos';
@@ -117,10 +120,24 @@ export class UsuariosListaComponent {
     { valor: 'inativos', rotulo: 'Inativos' }
   ];
 
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+
   readonly dados = signal<Pagina<Usuario> | null>(null);
   readonly carregando = signal(true);
-  readonly filtro = signal<Filtro>('todos');
-  readonly pagina = signal(1);
+
+  private readonly parametros = toSignal(this.route.queryParamMap, {
+    initialValue: this.route.snapshot.queryParamMap
+  });
+
+  /** Página e filtro vivem na URL: a listagem filtrada vira um link compartilhável. */
+  readonly pagina = computed(() => paginaDaUrl(this.parametros().get('pagina')));
+
+  readonly filtro = computed<Filtro>(() => {
+    const valor = this.parametros().get('status');
+
+    return valor === 'ativos' || valor === 'inativos' ? valor : 'todos';
+  });
 
   readonly formAberto = signal(false);
   readonly emEdicao = signal<Usuario | null>(null);
@@ -128,18 +145,28 @@ export class UsuariosListaComponent {
   readonly usuarios = computed(() => this.dados()?.itens ?? []);
 
   constructor() {
-    this.carregar();
+    effect(() => {
+      this.pagina();
+      this.filtro();
+      this.carregar();
+    });
   }
 
+  /** Trocar de filtro volta à primeira página: a numeração antiga não vale mais. */
   mudarFiltro(filtro: Filtro): void {
-    this.filtro.set(filtro);
-    this.pagina.set(1);
-    this.carregar();
+    this.navegar({ status: filtro === 'todos' ? null : filtro, pagina: null });
   }
 
   irParaPagina(pagina: number): void {
-    this.pagina.set(pagina);
-    this.carregar();
+    this.navegar({ pagina: pagina === 1 ? null : pagina });
+  }
+
+  private navegar(queryParams: Record<string, string | number | null>): void {
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams,
+      queryParamsHandling: 'merge'
+    });
   }
 
   abrirCriacao(): void {
