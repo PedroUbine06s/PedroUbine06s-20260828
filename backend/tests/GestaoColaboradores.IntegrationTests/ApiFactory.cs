@@ -19,23 +19,40 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         .WithDatabase("gestao_testes")
         .Build();
 
+    /// <summary>
+    /// Limite de login por minuto. A suíte sobe alto para não esbarrar no rate limiter a cada
+    /// teste; a classe que verifica o limiter sobrescreve com um valor baixo.
+    /// </summary>
+    protected virtual int LoginPorMinuto => 1000;
+
+    private string? _token;
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseSetting("ConnectionStrings:Default", _db.GetConnectionString());
+        builder.UseSetting("RateLimit:LoginPorMinuto", LoginPorMinuto.ToString());
     }
 
-    /// <summary>Cliente já autenticado com o admin do seed.</summary>
+    /// <summary>
+    /// Cliente já autenticado com o admin do seed. O token é obtido uma vez e reaproveitado:
+    /// os testes que não são de autenticação não têm por que refazer login a cada um.
+    /// </summary>
     public async Task<HttpClient> CriarClienteAutenticadoAsync()
     {
         var client = CreateClient();
 
+        _token ??= await ObterTokenAsync(client);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _token);
+
+        return client;
+    }
+
+    private static async Task<string> ObterTokenAsync(HttpClient client)
+    {
         var resposta = await client.PostAsJsonAsync("/api/v1/auth/login", new LoginDto("admin", "admin123"));
         resposta.EnsureSuccessStatusCode();
 
-        var token = (await resposta.Content.ReadFromJsonAsync<TokenRespostaDto>())!.Token;
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-
-        return client;
+        return (await resposta.Content.ReadFromJsonAsync<TokenRespostaDto>())!.Token;
     }
 
     public Task InitializeAsync() => _db.StartAsync();

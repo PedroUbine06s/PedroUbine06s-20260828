@@ -81,6 +81,21 @@ concorrência entre requisições simultâneas é resolvida pelo índice único,
   suportar a mesma pessoa ocupando dois cargos, cenário que o enunciado não pede. A regra é
   garantida por índice único e checada antes de inserir, devolvendo **409**.
 - **Senhas:** BCrypt; hash jamais exposto em resposta.
+- **Rate limiting só no login** — é o endpoint que um atacante repete milhares de vezes, e
+  cada tentativa custa um BCrypt ao servidor. A janela é por IP, para que um atacante não
+  consiga trancar a porta dos demais, e o limite é configurável (`RateLimit:LoginPorMinuto`)
+  porque esse é um número que operação ajusta, não desenvolvimento.
+- **Concorrência otimista por token de versão** — cada entidade tem um `Versao` que muda a
+  cada alteração e entra no `WHERE` do `UPDATE`; um conflito vira **409** em vez de
+  sobrescrever em silêncio. Não usei a coluna `xmin` do PostgreSQL porque o suporte a ela foi
+  removido do provider Npgsql 10, e uma coluna própria ainda funciona em qualquer banco.
+  **Escopo honesto:** isso protege a janela entre a leitura e a gravação *dentro de uma
+  requisição*. O caso "abri o formulário há cinco minutos" exigiria devolver a versão ao
+  cliente e recebê-la de volta via `If-Match`, o que não foi implementado.
+- **Segredo do JWT validado no arranque** — o valor versionado em `appsettings.json` é de
+  desenvolvimento e a aplicação **recusa subir** com ele fora de Development, além de exigir
+  no mínimo 32 caracteres. Configuração errada deve derrubar o processo, não ficar silenciosa
+  até alguém explorá-la.
 - **Identificador é UUID v7, gerado no domínio** — a versão 7 é ordenada no tempo, então
   preserva a localidade do índice que um UUID v4 destruiria com inserções espalhadas. Gerar
   na entidade, e não no banco, faz o objeto nascer com identidade: dá para montar o grafo
@@ -117,18 +132,18 @@ Todos os demais endpoints exigem o token.
 
 | Método | Rota | Descrição |
 |--------|------|-----------|
-| GET | `/api/v1/usuarios?ativo=` | Lista usuários, com filtro opcional por status |
+| GET | `/api/v1/usuarios?ativo=&pagina=&tamanho=` | Lista usuários, com filtro opcional por status |
 | GET | `/api/v1/usuarios/{id}` | Retorna um usuário |
 | POST | `/api/v1/usuarios` | Cadastra usuário |
 | PUT | `/api/v1/usuarios/{id}` | Atualiza **somente** senha e status |
 | PATCH | `/api/v1/usuarios/{id}` | Atualização parcial: envie só os campos que mudam |
-| GET | `/api/v1/colaboradores` | Lista colaboradores com a unidade |
+| GET | `/api/v1/colaboradores?pagina=&tamanho=` | Lista colaboradores com a unidade |
 | GET | `/api/v1/colaboradores/{id}` | Retorna um colaborador |
 | POST | `/api/v1/colaboradores` | Cadastra colaborador (409 duplicado / 422 unidade inativa) |
 | PUT | `/api/v1/colaboradores/{id}` | Atualiza nome e unidade |
 | PATCH | `/api/v1/colaboradores/{id}` | Renomeia ou transfere, sem exigir os dois campos |
 | DELETE | `/api/v1/colaboradores/{id}` | Remove colaborador |
-| GET | `/api/v1/unidades` | Lista unidades com seus colaboradores |
+| GET | `/api/v1/unidades?pagina=&tamanho=` | Lista unidades com seus colaboradores |
 | GET | `/api/v1/unidades/{id}` | Retorna uma unidade com seus colaboradores |
 | POST | `/api/v1/unidades` | Cadastra unidade |
 | PUT | `/api/v1/unidades/{id}` | Atualiza nome / ativa / inativa |
@@ -139,6 +154,10 @@ representação mutável inteira e por isso exige todos os campos; o `PATCH` apl
 foi enviado, e campo ausente significa "não altere". É a diferença entre "a unidade passa a
 ser assim" e "apenas inative a unidade". Um `PATCH` sem nenhum campo é recusado com 400 — sem
 campos não é um pedido de "não mude nada", é engano do cliente.
+
+As listagens são **paginadas** e devolvem `{ itens, pagina, tamanho, total, totalDePaginas }`.
+O padrão é 20 itens e o teto é 100 — sem teto, `?tamanho=1000000` reproduziria justamente o
+problema que a paginação evita. `GET /health` verifica a API e o banco, e não exige token.
 
 Erros seguem **ProblemDetails (RFC 7807)**.
 A collection do Postman em [`postman/`](postman/) tem 30 requisições cobrindo os caminhos
@@ -152,13 +171,13 @@ cd backend
 dotnet test
 ```
 
-**81 testes**, divididos em duas suítes com propósitos distintos.
+**86 testes**, divididos em duas suítes com propósitos distintos.
 
-Os **61 de unidade** (xUnit + NSubstitute) rodam em ~100 ms e cobrem o domínio sem mock algum
+Os **62 de unidade** (xUnit + NSubstitute) rodam em ~100 ms e cobrem o domínio sem mock algum
 e os serviços com repositórios simulados. Eles verificam efeito, não só retorno: quando uma
 regra falha, o teste assere que `CommitAsync` **não** foi chamado.
 
-Os **20 de integração** (`WebApplicationFactory` + **Testcontainers**) sobem um PostgreSQL real
+Os **24 de integração** (`WebApplicationFactory` + **Testcontainers**) sobem um PostgreSQL real
 em contêiner e exercitam HTTP de ponta a ponta — pipeline de autenticação, validação, migrations
 e seed inclusos. Não se usa InMemory provider aqui de propósito: ele não tem índice único, e é
 justamente o índice que garante a unicidade de código e login.

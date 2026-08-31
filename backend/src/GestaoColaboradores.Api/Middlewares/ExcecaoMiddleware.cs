@@ -18,6 +18,14 @@ public class ExcecaoMiddleware(RequestDelegate next, ILogger<ExcecaoMiddleware> 
         {
             await next(context);
         }
+        catch (ConflitoDeConcorrenciaException ex)
+        {
+            logger.LogWarning(ex, "Conflito de concorrência em {Metodo} {Rota}",
+                context.Request.Method, context.Request.Path);
+
+            await EscreverAsync(context, StatusCodes.Status409Conflict,
+                "Conflito de concorrência.", ex.Message);
+        }
         catch (ConflitoDePersistenciaException ex)
         {
             // A mensagem interna carrega o nome da restrição — útil no log, ruído (e pista
@@ -42,14 +50,18 @@ public class ExcecaoMiddleware(RequestDelegate next, ILogger<ExcecaoMiddleware> 
     private static Task EscreverAsync(HttpContext context, int status, string titulo, string detalhe)
     {
         context.Response.StatusCode = status;
-        context.Response.ContentType = "application/problem+json";
 
-        return context.Response.WriteAsJsonAsync(new ProblemDetails
-        {
-            Status = status,
-            Title = titulo,
-            Detail = detalhe,
-            Instance = context.Request.Path
-        });
+        // O contentType vai no próprio WriteAsJsonAsync: definir Response.ContentType antes
+        // não adianta, porque o método o sobrescreve com application/json.
+        return context.Response.WriteAsJsonAsync(
+            new ProblemDetails
+            {
+                Status = status,
+                Title = titulo,
+                Detail = detalhe,
+                Instance = context.Request.Path
+            },
+            options: null,
+            contentType: "application/problem+json");
     }
 }

@@ -137,25 +137,30 @@ public class UsuarioServiceTests
     }
 
     [Fact]
-    public async Task Listar_SemFiltro_TrazTodos()
+    public async Task Listar_RepassaOFiltroEMontaOEnvelopeDaPagina()
     {
-        _usuarioRepo.ListarAsync(Arg.Any<CancellationToken>()).Returns([Usuario.Criar("USR000001", "admin", "h")]);
+        List<Usuario> pagina = [Usuario.Criar("USR000001", "admin", "h")];
+        _usuarioRepo.ListarPaginadoAsync(false, Arg.Any<PaginacaoQuery>(), Arg.Any<CancellationToken>())
+            .Returns((pagina, 42));
 
-        var resultado = await CriarService().ListarAsync(null);
+        var resultado = await CriarService().ListarAsync(false, new PaginacaoQuery { Pagina = 2, Tamanho = 10 });
 
-        Assert.Single(resultado.Valor!);
-        await _usuarioRepo.Received().ListarAsync(Arg.Any<CancellationToken>());
-        await _usuarioRepo.DidNotReceive().ListarPorStatusAsync(Arg.Any<bool>(), Arg.Any<CancellationToken>());
+        Assert.Single(resultado.Valor!.Itens);
+        Assert.Equal(2, resultado.Valor.Pagina);
+        Assert.Equal(10, resultado.Valor.Tamanho);
+        Assert.Equal(42, resultado.Valor.Total);
+        // O total é do conjunto inteiro, não da página: 42 registros em páginas de 10 dão 5.
+        Assert.Equal(5, resultado.Valor.TotalDePaginas);
     }
 
     [Fact]
-    public async Task Listar_ComFiltro_DelegaAoRepositorioFiltrado()
+    public async Task Listar_SemFiltro_NaoRestringePorStatus()
     {
-        _usuarioRepo.ListarPorStatusAsync(false, Arg.Any<CancellationToken>()).Returns([]);
+        _usuarioRepo.ListarPaginadoAsync(null, Arg.Any<PaginacaoQuery>(), Arg.Any<CancellationToken>())
+            .Returns(([], 0));
 
-        await CriarService().ListarAsync(false);
+        await CriarService().ListarAsync(null, new PaginacaoQuery());
 
-        await _usuarioRepo.Received().ListarPorStatusAsync(false, Arg.Any<CancellationToken>());
-        await _usuarioRepo.DidNotReceive().ListarAsync(Arg.Any<CancellationToken>());
+        await _usuarioRepo.Received().ListarPaginadoAsync(null, Arg.Any<PaginacaoQuery>(), Arg.Any<CancellationToken>());
     }
 }

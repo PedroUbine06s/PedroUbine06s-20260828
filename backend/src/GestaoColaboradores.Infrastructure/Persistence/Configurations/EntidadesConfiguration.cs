@@ -2,15 +2,25 @@ using GestaoColaboradores.Domain.Common;
 using GestaoColaboradores.Domain.Entidades;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using static GestaoColaboradores.Infrastructure.Persistence.Configurations.Concorrencia;
 
 namespace GestaoColaboradores.Infrastructure.Persistence.Configurations;
 
+// Concorrência otimista: sem o token de versão, dois usuários editando o mesmo registro
+// fariam o último sobrescrever o primeiro em silêncio.
+//
 // Unicidade garantida NO BANCO (unique index), não só na aplicação.
 // Uma violação vira 409 por dois caminhos: a checagem prévia no service, que dá a mensagem
 // específica, e o UnitOfWork, que traduz o erro do PostgreSQL para quem escapar dela.
 //
 // Os limites de tamanho vêm das constantes do domínio: schema e validação leem da mesma
 // fonte, então é impossível o domínio aceitar um valor que a coluna rejeitaria.
+
+file static class Concorrencia
+{
+    public static void ConfigurarConcorrencia<T>(EntityTypeBuilder<T> builder) where T : BaseEntity =>
+        builder.Property(e => e.Versao).IsConcurrencyToken();
+}
 
 public class UsuarioConfiguration : IEntityTypeConfiguration<Usuario>
 {
@@ -19,6 +29,8 @@ public class UsuarioConfiguration : IEntityTypeConfiguration<Usuario>
         builder.ToTable("usuarios");
         builder.HasKey(u => u.Id);
         builder.Property(u => u.Id).ValueGeneratedNever();
+        ConfigurarConcorrencia(builder);
+        ConfigurarConcorrencia(builder);
         builder.Property(u => u.Codigo).HasMaxLength(BaseEntity.TamanhoMaximoCodigo).IsRequired();
         builder.HasIndex(u => u.Codigo).IsUnique();
         builder.Property(u => u.Login).HasMaxLength(Usuario.TamanhoMaximoLogin).IsRequired();
@@ -34,6 +46,7 @@ public class ColaboradorConfiguration : IEntityTypeConfiguration<Colaborador>
         builder.ToTable("colaboradores");
         builder.HasKey(c => c.Id);
         builder.Property(c => c.Id).ValueGeneratedNever();
+        ConfigurarConcorrencia(builder);
         builder.Property(c => c.Codigo).HasMaxLength(BaseEntity.TamanhoMaximoCodigo).IsRequired();
         builder.HasIndex(c => c.Codigo).IsUnique();
         builder.Property(c => c.Nome).HasMaxLength(Colaborador.TamanhoMaximoNome).IsRequired();

@@ -11,8 +11,7 @@ public interface IUnidadeService
     Task<Result<UnidadeRespostaDto>> CriarAsync(CriarUnidadeDto dto, CancellationToken ct = default);
     Task<Result<UnidadeRespostaDto>> AtualizarAsync(Guid id, AtualizarUnidadeDto dto, CancellationToken ct = default);
     Task<Result<UnidadeRespostaDto>> AtualizarParcialAsync(Guid id, AtualizarParcialUnidadeDto dto, CancellationToken ct = default);
-    /// <summary>Requisito: listar unidades COM seus colaboradores.</summary>
-    Task<Result<List<UnidadeComColaboradoresDto>>> ListarAsync(CancellationToken ct = default);
+    Task<Result<PaginaDto<UnidadeComColaboradoresDto>>> ListarAsync(PaginacaoQuery paginacao, CancellationToken ct = default);
 }
 
 public class UnidadeService(
@@ -86,19 +85,20 @@ public class UnidadeService(
         return Result<UnidadeRespostaDto>.Sucesso(ParaDto(unidade));
     }
 
-    public async Task<Result<List<UnidadeComColaboradoresDto>>> ListarAsync(CancellationToken ct = default)
+    public async Task<Result<PaginaDto<UnidadeComColaboradoresDto>>> ListarAsync(
+        PaginacaoQuery paginacao, CancellationToken ct = default)
     {
-        var unidades = await unidadeRepo.ListarComColaboradoresAsync(ct);
+        var (itens, total) = await unidadeRepo.ListarComColaboradoresPaginadoAsync(paginacao, ct);
 
-        return Result<List<UnidadeComColaboradoresDto>>.Sucesso(
-            unidades.Select(ParaDtoComColaboradores).ToList());
+        return Result<PaginaDto<UnidadeComColaboradoresDto>>.Sucesso(
+            new PaginaDto<UnidadeComColaboradoresDto>(
+                itens.Select(ParaDtoComColaboradores).ToList(), paginacao.Pagina, paginacao.Tamanho, total));
     }
 
     private static UnidadeRespostaDto ParaDto(Unidade u) =>
         new(u.Id, u.Codigo, u.Nome, u.Ativo);
 
-    // O código e o nome da unidade saem de 'u', que já está em mãos: buscá-los por
-    // c.Unidade faria o EF voltar ao banco uma vez por colaborador.
+
     private static UnidadeComColaboradoresDto ParaDtoComColaboradores(Unidade u) =>
         new(u.Id, u.Codigo, u.Nome, u.Ativo,
             u.Colaboradores

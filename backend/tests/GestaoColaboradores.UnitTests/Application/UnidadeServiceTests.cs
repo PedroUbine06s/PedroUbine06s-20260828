@@ -100,13 +100,15 @@ public class UnidadeServiceTests
         var filial = Unidade.Criar("UNI000002", "Filial Centro");
         filial.Inativar();
 
-        _unidadeRepo.ListarComColaboradoresAsync(Arg.Any<CancellationToken>()).Returns([matriz, filial]);
+        List<Unidade> pagina = [matriz, filial];
+        _unidadeRepo.ListarComColaboradoresPaginadoAsync(Arg.Any<PaginacaoQuery>(), Arg.Any<CancellationToken>())
+            .Returns((pagina, 2));
 
-        var resultado = await CriarService().ListarAsync();
+        var resultado = await CriarService().ListarAsync(new PaginacaoQuery());
 
-        Assert.Equal(2, resultado.Valor!.Count);
-        Assert.True(resultado.Valor[0].Ativo);
-        Assert.False(resultado.Valor[1].Ativo);
-        Assert.All(resultado.Valor, dto => Assert.NotNull(dto.Colaboradores));
+        Assert.Equal(2, resultado.Valor!.Itens.Count);
+        Assert.True(resultado.Valor.Itens[0].Ativo);
+        Assert.False(resultado.Valor.Itens[1].Ativo);
+        Assert.All(resultado.Valor.Itens, dto => Assert.NotNull(dto.Colaboradores));
     }
 }

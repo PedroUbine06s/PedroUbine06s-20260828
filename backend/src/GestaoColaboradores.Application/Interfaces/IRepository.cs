@@ -7,7 +7,6 @@ public interface IRepository<T> where T : BaseEntity
 {
     Task<T?> ObterPorIdAsync(Guid id, CancellationToken ct = default);
     Task<T?> ObterPorCodigoAsync(string codigo, CancellationToken ct = default);
-    Task<List<T>> ListarAsync(CancellationToken ct = default);
     Task AdicionarAsync(T entidade, CancellationToken ct = default);
     void Remover(T entidade);
     Task<bool> ExisteCodigoAsync(string codigo, CancellationToken ct = default);

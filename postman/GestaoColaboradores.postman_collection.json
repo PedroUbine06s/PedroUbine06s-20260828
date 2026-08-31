@@ -300,6 +300,29 @@
           }
         },
         {
+          "name": "Listar paginado (pagina 1, 2 itens)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('envelope de pagina com no maximo 2 itens', function () {",
+                  "    const p = pm.response.json();",
+                  "    pm.expect(p.itens.length).to.be.at.most(2);",
+                  "    pm.expect(p.total).to.be.a('number');",
+                  "    pm.expect(p.totalDePaginas).to.be.a('number');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/usuarios?pagina=1&tamanho=2"
+          }
+        },
+        {
           "name": "Criar (codigo gerado pelo sistema)",
           "event": [
             {
@@ -611,6 +634,32 @@
           "request": {
             "method": "DELETE",
             "url": "{{baseUrl}}/api/v1/colaboradores/{{colaboradorId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Infra",
+      "item": [
+        {
+          "name": "Health check (sem token)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 e saudavel', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "url": "{{baseUrl}}/health"
           }
         }
       ]

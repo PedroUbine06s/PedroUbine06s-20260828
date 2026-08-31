@@ -22,6 +22,11 @@ public class UnitOfWork(AppDbContext context) : IUnitOfWork
         {
             return await context.SaveChangesAsync(ct);
         }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            throw new ConflitoDeConcorrenciaException(
+                "O registro foi alterado por outra pessoa. Recarregue e tente novamente.", ex);
+        }
         catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: ViolacaoDeUnicidade } pg)
         {
             throw new ConflitoDePersistenciaException(

@@ -1,3 +1,4 @@
+using GestaoColaboradores.Application.Common;
 using GestaoColaboradores.Application.Dtos;
 using GestaoColaboradores.Application.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -10,9 +11,9 @@ public class ColaboradoresController(IColaboradorService service) : ApiControlle
 {
     /// <summary>Lista os colaboradores com a unidade de cada um.</summary>
     [HttpGet]
-    [ProducesResponseType(typeof(List<ColaboradorRespostaDto>), StatusCodes.Status200OK)]
-    public async Task<ActionResult> Listar(CancellationToken ct) =>
-        DeResultado(await service.ListarAsync(ct));
+    [ProducesResponseType(typeof(PaginaDto<ColaboradorRespostaDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult> Listar([FromQuery] PaginacaoQuery paginacao, CancellationToken ct) =>
+        DeResultado(await service.ListarAsync(paginacao, ct));
 
     /// <summary>Retorna um colaborador pelo id.</summary>
     [HttpGet("{id:guid}")]

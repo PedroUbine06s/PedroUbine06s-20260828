@@ -1,3 +1,4 @@
+using GestaoColaboradores.Application.Common;
 using GestaoColaboradores.Application.Dtos;
 using GestaoColaboradores.Application.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -10,9 +11,9 @@ public class UsuariosController(IUsuarioService service) : ApiControllerBase
 {
     /// <summary>Lista os usuários. Informe <c>ativo</c> para filtrar por status.</summary>
     [HttpGet]
-    [ProducesResponseType(typeof(List<UsuarioRespostaDto>), StatusCodes.Status200OK)]
-    public async Task<ActionResult> Listar([FromQuery] bool? ativo, CancellationToken ct) =>
-        DeResultado(await service.ListarAsync(ativo, ct));
+    [ProducesResponseType(typeof(PaginaDto<UsuarioRespostaDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult> Listar([FromQuery] bool? ativo, [FromQuery] PaginacaoQuery paginacao, CancellationToken ct) =>
+        DeResultado(await service.ListarAsync(ativo, paginacao, ct));
 
     /// <summary>Retorna um usuário pelo id.</summary>
     [HttpGet("{id:guid}")]

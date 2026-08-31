@@ -2,6 +2,7 @@ using GestaoColaboradores.Application.Dtos;
 using GestaoColaboradores.Application.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace GestaoColaboradores.Api.Controllers;
 
@@ -14,8 +15,10 @@ public class AuthController(IAuthService authService) : ApiControllerBase
     /// </summary>
     [HttpPost("login")]
     [AllowAnonymous]
+    [EnableRateLimiting(PoliticasDeLimite.Login)]
     [ProducesResponseType(typeof(TokenRespostaDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
     public async Task<ActionResult> Login(LoginDto dto, CancellationToken ct) =>
         DeResultado(await authService.LoginAsync(dto, ct));
 }

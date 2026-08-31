@@ -19,9 +19,6 @@ public class Repository<T>(AppDbContext context) : IRepository<T> where T : Base
     public virtual Task<T?> ObterPorCodigoAsync(string codigo, CancellationToken ct = default) =>
         Set.FirstOrDefaultAsync(e => e.Codigo == codigo, ct);
 
-    public virtual Task<List<T>> ListarAsync(CancellationToken ct = default) =>
-        Set.AsNoTracking().ToListAsync(ct);
-
     public virtual async Task AdicionarAsync(T entidade, CancellationToken ct = default) =>
         await Set.AddAsync(entidade, ct);
 

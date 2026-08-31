@@ -22,5 +22,19 @@ public abstract class BaseEntity
     public DateTime CriadoEm { get; protected set; } = DateTime.UtcNow;
     public DateTime? AtualizadoEm { get; protected set; }
 
-    protected void MarcarAtualizado() => AtualizadoEm = DateTime.UtcNow;
+    /// <summary>
+    /// Token de concorrência otimista: muda a cada alteração, e o EF o inclui na cláusula
+    /// WHERE do UPDATE. Se outra transação gravou a linha entre a leitura e a gravação, o
+    /// UPDATE não encontra nada e o conflito vira 409 em vez de sobrescrever em silêncio.
+    ///
+    /// É uma coluna própria, e não a xmin do PostgreSQL: o suporte a xmin foi removido do
+    /// provider Npgsql 10, e um token explícito ainda funciona em qualquer banco.
+    /// </summary>
+    public Guid Versao { get; protected set; } = Guid.CreateVersion7();
+
+    protected void MarcarAtualizado()
+    {
+        AtualizadoEm = DateTime.UtcNow;
+        Versao = Guid.CreateVersion7();
+    }
 }

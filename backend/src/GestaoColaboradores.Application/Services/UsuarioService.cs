@@ -12,12 +12,13 @@ public interface IUsuarioService
     Task<Result<UsuarioRespostaDto>> AtualizarAsync(Guid id, AtualizarUsuarioDto dto, CancellationToken ct = default);
     Task<Result<UsuarioRespostaDto>> AtualizarParcialAsync(Guid id, AtualizarParcialUsuarioDto dto, CancellationToken ct = default);
     /// <param name="ativo">null = todos; true/false = filtro por status (requisito do enunciado).</param>
-    Task<Result<List<UsuarioRespostaDto>>> ListarAsync(bool? ativo, CancellationToken ct = default);
+    Task<Result<PaginaDto<UsuarioRespostaDto>>> ListarAsync(
+        bool? ativo, PaginacaoQuery paginacao, CancellationToken ct = default);
 }
 
 public class UsuarioService(
     IUsuarioRepository usuarioRepo,
-    IPasswordHasher hasher,          // Strategy: nunca armazene a senha em texto plano
+    IPasswordHasher hasher,      
     IGeradorCodigo gerador,
     IUnitOfWork uow) : IUsuarioService
 {
@@ -32,8 +33,7 @@ public class UsuarioService(
 
     public async Task<Result<UsuarioRespostaDto>> CriarAsync(CriarUsuarioDto dto, CancellationToken ct = default)
     {
-        // O código não é mais conflitável: quem numera é o sistema. Sobra o login, que
-        // continua vindo do cliente e precisa ser único.
+
         if (await usuarioRepo.ExisteLoginAsync(dto.Login, ct))
             return Result<UsuarioRespostaDto>.Falha(
                 $"Já existe um usuário com o login '{dto.Login}'.", TipoErro.Conflito);
@@ -93,13 +93,14 @@ public class UsuarioService(
         return Result<UsuarioRespostaDto>.Sucesso(ParaDto(usuario));
     }
 
-    public async Task<Result<List<UsuarioRespostaDto>>> ListarAsync(bool? ativo, CancellationToken ct = default)
+    public async Task<Result<PaginaDto<UsuarioRespostaDto>>> ListarAsync(
+        bool? ativo, PaginacaoQuery paginacao, CancellationToken ct = default)
     {
-        var usuarios = ativo is null
-            ? await usuarioRepo.ListarAsync(ct)
-            : await usuarioRepo.ListarPorStatusAsync(ativo.Value, ct);
+        var (itens, total) = await usuarioRepo.ListarPaginadoAsync(ativo, paginacao, ct);
 
-        return Result<List<UsuarioRespostaDto>>.Sucesso(usuarios.Select(ParaDto).ToList());
+        return Result<PaginaDto<UsuarioRespostaDto>>.Sucesso(
+            new PaginaDto<UsuarioRespostaDto>(
+                itens.Select(ParaDto).ToList(), paginacao.Pagina, paginacao.Tamanho, total));
     }
 
     private static UsuarioRespostaDto ParaDto(Usuario u) =>

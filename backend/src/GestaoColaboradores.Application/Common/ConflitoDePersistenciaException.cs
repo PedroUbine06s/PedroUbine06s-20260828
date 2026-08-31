@@ -13,3 +13,11 @@ namespace GestaoColaboradores.Application.Common;
 /// </summary>
 public class ConflitoDePersistenciaException(string mensagem, Exception? innerException = null)
     : Exception(mensagem, innerException);
+
+/// <summary>
+/// A linha foi alterada por outra transação entre a leitura e a gravação (detectado pelo
+/// token de concorrência). É um 409 como o de unicidade, mas com causa e mensagem próprias:
+/// aqui não há valor duplicado, há uma alteração perdida que se recusou a acontecer.
+/// </summary>
+public class ConflitoDeConcorrenciaException(string mensagem, Exception? innerException = null)
+    : Exception(mensagem, innerException);

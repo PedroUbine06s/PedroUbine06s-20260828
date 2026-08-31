@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using GestaoColaboradores.Application.Common;
 using GestaoColaboradores.Application.Dtos;
 using Xunit;
 
@@ -15,8 +16,8 @@ public class FluxosTests(ApiFactory factory) : IClassFixture<ApiFactory>
 {
     private static async Task<UnidadeComColaboradoresDto> UnidadeDoSeedAsync(HttpClient client, bool ativa)
     {
-        var unidades = await client.GetFromJsonAsync<List<UnidadeComColaboradoresDto>>("/api/v1/unidades");
-        return unidades!.First(u => u.Ativo == ativa);
+        var pagina = await client.GetFromJsonAsync<PaginaDto<UnidadeComColaboradoresDto>>("/api/v1/unidades");
+        return pagina!.Itens.First(u => u.Ativo == ativa);
     }
 
     private static async Task<UsuarioRespostaDto> CriarUsuarioAsync(HttpClient client, string login)
@@ -140,10 +141,10 @@ public class FluxosTests(ApiFactory factory) : IClassFixture<ApiFactory>
     {
         var client = await factory.CriarClienteAutenticadoAsync();
 
-        var usuarios = await client.GetFromJsonAsync<List<UsuarioRespostaDto>>("/api/v1/usuarios?ativo=false");
+        var pagina = await client.GetFromJsonAsync<PaginaDto<UsuarioRespostaDto>>("/api/v1/usuarios?ativo=false");
 
-        Assert.NotEmpty(usuarios!);
-        Assert.All(usuarios!, u => Assert.False(u.Ativo));
+        Assert.NotEmpty(pagina!.Itens);
+        Assert.All(pagina.Itens, u => Assert.False(u.Ativo));
     }
 
     [Fact]

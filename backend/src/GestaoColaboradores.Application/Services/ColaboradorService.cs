@@ -12,14 +12,10 @@ public interface IColaboradorService
     Task<Result<ColaboradorRespostaDto>> AtualizarAsync(Guid id, AtualizarColaboradorDto dto, CancellationToken ct = default);
     Task<Result<ColaboradorRespostaDto>> AtualizarParcialAsync(Guid id, AtualizarParcialColaboradorDto dto, CancellationToken ct = default);
     Task<Result> RemoverAsync(Guid id, CancellationToken ct = default);
-    Task<Result<List<ColaboradorRespostaDto>>> ListarAsync(CancellationToken ct = default);
+    Task<Result<PaginaDto<ColaboradorRespostaDto>>> ListarAsync(PaginacaoQuery paginacao, CancellationToken ct = default);
 }
 
-/// <summary>
-/// FATIA VERTICAL DE REFERÊNCIA — este service está completo de propósito:
-/// mostra Result Pattern + Factory Method + Unit of Work funcionando juntos.
-/// Use como modelo para UsuarioService e UnidadeService.
-/// </summary>
+
 public class ColaboradorService(
     IColaboradorRepository colaboradorRepo,
     IUnidadeRepository unidadeRepo,
@@ -64,10 +60,14 @@ public class ColaboradorService(
         return Result<ColaboradorRespostaDto>.Sucesso(ParaDto(colaborador));
     }
 
-    public async Task<Result<List<ColaboradorRespostaDto>>> ListarAsync(CancellationToken ct = default)
+    public async Task<Result<PaginaDto<ColaboradorRespostaDto>>> ListarAsync(
+        PaginacaoQuery paginacao, CancellationToken ct = default)
     {
-        var colaboradores = await colaboradorRepo.ListarComUnidadeAsync(ct);
-        return Result<List<ColaboradorRespostaDto>>.Sucesso(colaboradores.Select(ParaDto).ToList());
+        var (itens, total) = await colaboradorRepo.ListarComUnidadePaginadoAsync(paginacao, ct);
+
+        return Result<PaginaDto<ColaboradorRespostaDto>>.Sucesso(
+            new PaginaDto<ColaboradorRespostaDto>(
+                itens.Select(ParaDto).ToList(), paginacao.Pagina, paginacao.Tamanho, total));
     }
 
     public async Task<Result<ColaboradorRespostaDto>> AtualizarAsync(Guid id, AtualizarColaboradorDto dto, CancellationToken ct = default)
@@ -84,8 +84,7 @@ public class ColaboradorService(
             return Result<ColaboradorRespostaDto>.Falha(
                 "Unidade inativa não pode receber colaboradores.", TipoErro.RegraNegocio);
 
-        // As duas alterações ocorrem antes do commit: se a segunda falhasse depois de um
-        // commit da primeira, o colaborador ficaria gravado pela metade.
+
         colaborador.AlterarNome(dto.Nome);
         colaborador.AlterarUnidade(unidade);
 
@@ -115,7 +114,6 @@ public class ColaboradorService(
                     "Unidade inativa não pode receber colaboradores.", TipoErro.RegraNegocio);
         }
 
-        // Alterações só depois de todas as validações, e todas antes do commit.
         if (dto.Nome is not null)
             colaborador.AlterarNome(dto.Nome);
 
