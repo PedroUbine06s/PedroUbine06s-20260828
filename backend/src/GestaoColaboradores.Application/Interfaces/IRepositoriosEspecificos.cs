@@ -13,6 +13,12 @@ public interface IColaboradorRepository : IRepository<Colaborador>
 {
     /// <summary>Listagem do enunciado: código, nome e unidade associada (Include).</summary>
     Task<List<Colaborador>> ListarComUnidadeAsync(CancellationToken ct = default);
+
+    /// <summary>
+    /// Busca rastreada já com a unidade carregada. Necessária quando a atualização pode não
+    /// tocar na unidade: sem o Include, montar o DTO de resposta acessaria uma referência nula.
+    /// </summary>
+    Task<Colaborador?> ObterComUnidadeAsync(int id, CancellationToken ct = default);
 }
 
 public interface IUnidadeRepository : IRepository<Unidade>

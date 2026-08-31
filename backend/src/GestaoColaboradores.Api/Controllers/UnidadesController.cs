@@ -24,4 +24,9 @@ public class UnidadesController(IUnidadeService service) : ApiControllerBase
     [HttpPut("{id:int}")]
     public async Task<ActionResult> Atualizar(int id, AtualizarUnidadeDto dto, CancellationToken ct) =>
         DeResultado(await service.AtualizarAsync(id, dto, ct));
+
+    /// <summary>PATCH: inativar mandando apenas {"ativo": false}, sem reenviar o nome.</summary>
+    [HttpPatch("{id:int}")]
+    public async Task<ActionResult> AtualizarParcial(int id, AtualizarParcialUnidadeDto dto, CancellationToken ct) =>
+        DeResultado(await service.AtualizarParcialAsync(id, dto, ct));
 }

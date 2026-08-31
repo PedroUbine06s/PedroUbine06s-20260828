@@ -9,6 +9,7 @@ public interface IColaboradorService
 {
     Task<Result<ColaboradorRespostaDto>> CriarAsync(CriarColaboradorDto dto, CancellationToken ct = default);
     Task<Result<ColaboradorRespostaDto>> AtualizarAsync(int id, AtualizarColaboradorDto dto, CancellationToken ct = default);
+    Task<Result<ColaboradorRespostaDto>> AtualizarParcialAsync(int id, AtualizarParcialColaboradorDto dto, CancellationToken ct = default);
     Task<Result> RemoverAsync(int id, CancellationToken ct = default);
     Task<Result<List<ColaboradorRespostaDto>>> ListarAsync(CancellationToken ct = default);
 }
@@ -74,6 +75,39 @@ public class ColaboradorService(
         // commit da primeira, o colaborador ficaria gravado pela metade.
         colaborador.AlterarNome(dto.Nome);
         colaborador.AlterarUnidade(unidade);
+
+        await uow.CommitAsync(ct);
+
+        return Result<ColaboradorRespostaDto>.Sucesso(ParaDto(colaborador));
+    }
+
+    /// <summary>PATCH: renomear sem reenviar a unidade, ou transferir sem reenviar o nome.</summary>
+    public async Task<Result<ColaboradorRespostaDto>> AtualizarParcialAsync(int id, AtualizarParcialColaboradorDto dto, CancellationToken ct = default)
+    {
+        var colaborador = await colaboradorRepo.ObterComUnidadeAsync(id, ct);
+        if (colaborador is null)
+            return Result<ColaboradorRespostaDto>.Falha($"Colaborador {id} não encontrado.", TipoErro.NaoEncontrado);
+
+        Unidade? novaUnidade = null;
+
+        if (dto.CodigoUnidade is not null)
+        {
+            novaUnidade = await unidadeRepo.ObterPorCodigoAsync(dto.CodigoUnidade, ct);
+
+            if (novaUnidade is null)
+                return Result<ColaboradorRespostaDto>.Falha("Unidade não encontrada.", TipoErro.NaoEncontrado);
+
+            if (!novaUnidade.PodeReceberColaborador)
+                return Result<ColaboradorRespostaDto>.Falha(
+                    "Unidade inativa não pode receber colaboradores.", TipoErro.RegraNegocio);
+        }
+
+        // Alterações só depois de todas as validações, e todas antes do commit.
+        if (dto.Nome is not null)
+            colaborador.AlterarNome(dto.Nome);
+
+        if (novaUnidade is not null)
+            colaborador.AlterarUnidade(novaUnidade);
 
         await uow.CommitAsync(ct);
 

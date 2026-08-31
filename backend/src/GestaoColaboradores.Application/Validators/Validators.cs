@@ -81,6 +81,59 @@ public class AtualizarColaboradorValidator : AbstractValidator<AtualizarColabora
     }
 }
 
+// --- PATCH ---------------------------------------------------------------------------
+// Cada campo é opcional, mas um PATCH sem nenhum campo é engano do cliente, não um pedido
+
+public class AtualizarParcialUsuarioValidator : AbstractValidator<AtualizarParcialUsuarioDto>
+{
+    public AtualizarParcialUsuarioValidator()
+    {
+        RuleFor(x => x)
+            .Must(x => x.Senha is not null || x.Ativo is not null)
+            .WithMessage("Informe ao menos um campo para atualizar.");
+
+        RuleFor(x => x.Senha)
+            .MinimumLength(RegrasSenha.TamanhoMinimo)
+            .MaximumLength(RegrasSenha.TamanhoMaximo)
+            .When(x => !string.IsNullOrWhiteSpace(x.Senha));
+    }
+}
+
+public class AtualizarParcialUnidadeValidator : AbstractValidator<AtualizarParcialUnidadeDto>
+{
+    public AtualizarParcialUnidadeValidator()
+    {
+        RuleFor(x => x)
+            .Must(x => x.Nome is not null || x.Ativo is not null)
+            .WithMessage("Informe ao menos um campo para atualizar.");
+
+        RuleFor(x => x.Nome)
+            .NotEmpty()
+            .MaximumLength(Unidade.TamanhoMaximoNome)
+            .When(x => x.Nome is not null);
+    }
+}
+
+public class AtualizarParcialColaboradorValidator : AbstractValidator<AtualizarParcialColaboradorDto>
+{
+    public AtualizarParcialColaboradorValidator()
+    {
+        RuleFor(x => x)
+            .Must(x => x.Nome is not null || x.CodigoUnidade is not null)
+            .WithMessage("Informe ao menos um campo para atualizar.");
+
+        RuleFor(x => x.Nome)
+            .NotEmpty()
+            .MaximumLength(Colaborador.TamanhoMaximoNome)
+            .When(x => x.Nome is not null);
+
+        RuleFor(x => x.CodigoUnidade)
+            .NotEmpty()
+            .MaximumLength(BaseEntity.TamanhoMaximoCodigo)
+            .When(x => x.CodigoUnidade is not null);
+    }
+}
+
 public class LoginValidator : AbstractValidator<LoginDto>
 {
     public LoginValidator()

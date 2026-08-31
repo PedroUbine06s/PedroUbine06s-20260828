@@ -9,6 +9,7 @@ public interface IUnidadeService
 {
     Task<Result<UnidadeRespostaDto>> CriarAsync(CriarUnidadeDto dto, CancellationToken ct = default);
     Task<Result<UnidadeRespostaDto>> AtualizarAsync(int id, AtualizarUnidadeDto dto, CancellationToken ct = default);
+    Task<Result<UnidadeRespostaDto>> AtualizarParcialAsync(int id, AtualizarParcialUnidadeDto dto, CancellationToken ct = default);
     /// <summary>Requisito: listar unidades COM seus colaboradores.</summary>
     Task<Result<List<UnidadeComColaboradoresDto>>> ListarAsync(CancellationToken ct = default);
 }
@@ -41,6 +42,33 @@ public class UnidadeService(IUnidadeRepository unidadeRepo, IUnitOfWork uow) : I
             unidade.Ativar();
         else
             unidade.Inativar();
+
+        await uow.CommitAsync(ct);
+
+        return Result<UnidadeRespostaDto>.Sucesso(ParaDto(unidade));
+    }
+
+    /// <summary>
+    /// PATCH: aplica apenas os campos informados. É por aqui que se inativa uma unidade
+    /// sem precisar reenviar o nome — o caso de uso mais comum do enunciado.
+    /// </summary>
+    public async Task<Result<UnidadeRespostaDto>> AtualizarParcialAsync(int id, AtualizarParcialUnidadeDto dto, CancellationToken ct = default)
+    {
+        var unidade = await unidadeRepo.ObterPorIdAsync(id, ct);
+
+        if (unidade is null)
+            return Result<UnidadeRespostaDto>.Falha($"Unidade {id} não encontrada.", TipoErro.NaoEncontrado);
+
+        if (dto.Nome is not null)
+            unidade.AlterarNome(dto.Nome);
+
+        if (dto.Ativo is not null)
+        {
+            if (dto.Ativo.Value)
+                unidade.Ativar();
+            else
+                unidade.Inativar();
+        }
 
         await uow.CommitAsync(ct);
 

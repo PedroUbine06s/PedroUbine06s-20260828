@@ -22,6 +22,10 @@ public class ColaboradorRepository(AppDbContext context) : Repository<Colaborado
 {
     public Task<List<Colaborador>> ListarComUnidadeAsync(CancellationToken ct = default) =>
         Set.AsNoTracking().Include(c => c.Unidade).OrderBy(c => c.Nome).ToListAsync(ct);
+
+    // Sem AsNoTracking, ao contrário da listagem: quem busca por id vai alterar.
+    public Task<Colaborador?> ObterComUnidadeAsync(int id, CancellationToken ct = default) =>
+        Set.Include(c => c.Unidade).FirstOrDefaultAsync(c => c.Id == id, ct);
 }
 
 public class UnidadeRepository(AppDbContext context) : Repository<Unidade>(context), IUnidadeRepository

@@ -99,13 +99,22 @@ Todos os demais endpoints exigem o token.
 | GET | `/api/v1/usuarios?ativo=` | Lista usuários, com filtro opcional por status |
 | POST | `/api/v1/usuarios` | Cadastra usuário |
 | PUT | `/api/v1/usuarios/{id}` | Atualiza **somente** senha e status |
+| PATCH | `/api/v1/usuarios/{id}` | Atualização parcial: envie só os campos que mudam |
 | GET | `/api/v1/colaboradores` | Lista colaboradores com a unidade |
 | POST | `/api/v1/colaboradores` | Cadastra colaborador (409 duplicado / 422 unidade inativa) |
 | PUT | `/api/v1/colaboradores/{id}` | Atualiza nome e unidade |
+| PATCH | `/api/v1/colaboradores/{id}` | Renomeia ou transfere, sem exigir os dois campos |
 | DELETE | `/api/v1/colaboradores/{id}` | Remove colaborador |
 | GET | `/api/v1/unidades` | Lista unidades com seus colaboradores |
 | POST | `/api/v1/unidades` | Cadastra unidade |
 | PUT | `/api/v1/unidades/{id}` | Atualiza nome / ativa / inativa |
+| PATCH | `/api/v1/unidades/{id}` | Inativa com apenas `{"ativo": false}` |
+
+**PUT e PATCH coexistem por semântica, não por conveniência.** O `PUT` substitui a
+representação mutável inteira e por isso exige todos os campos; o `PATCH` aplica apenas o que
+foi enviado, e campo ausente significa "não altere". É a diferença entre "a unidade passa a
+ser assim" e "apenas inative a unidade". Um `PATCH` sem nenhum campo é recusado com 400 — sem
+campos não é um pedido de "não mude nada", é engano do cliente.
 
 Erros seguem **ProblemDetails (RFC 7807)**.
 Collection do Postman com auto-token e casos de erro: [`postman/`](postman/).

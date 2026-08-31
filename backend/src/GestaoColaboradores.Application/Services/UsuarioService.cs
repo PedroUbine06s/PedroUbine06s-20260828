@@ -9,6 +9,7 @@ public interface IUsuarioService
 {
     Task<Result<UsuarioRespostaDto>> CriarAsync(CriarUsuarioDto dto, CancellationToken ct = default);
     Task<Result<UsuarioRespostaDto>> AtualizarAsync(int id, AtualizarUsuarioDto dto, CancellationToken ct = default);
+    Task<Result<UsuarioRespostaDto>> AtualizarParcialAsync(int id, AtualizarParcialUsuarioDto dto, CancellationToken ct = default);
     /// <param name="ativo">null = todos; true/false = filtro por status (requisito do enunciado).</param>
     Task<Result<List<UsuarioRespostaDto>>> ListarAsync(bool? ativo, CancellationToken ct = default);
 }
@@ -49,6 +50,30 @@ public class UsuarioService(
             usuario.Ativar();
         else
             usuario.Inativar();
+
+        await uow.CommitAsync(ct);
+
+        return Result<UsuarioRespostaDto>.Sucesso(ParaDto(usuario));
+    }
+
+    /// <summary>PATCH: aplica apenas os campos informados; os nulos ficam como estão.</summary>
+    public async Task<Result<UsuarioRespostaDto>> AtualizarParcialAsync(int id, AtualizarParcialUsuarioDto dto, CancellationToken ct = default)
+    {
+        var usuario = await usuarioRepo.ObterPorIdAsync(id, ct);
+
+        if (usuario is null)
+            return Result<UsuarioRespostaDto>.Falha($"Usuário {id} não encontrado.", TipoErro.NaoEncontrado);
+
+        if (!string.IsNullOrWhiteSpace(dto.Senha))
+            usuario.AlterarSenha(hasher.Hash(dto.Senha));
+
+        if (dto.Ativo is not null)
+        {
+            if (dto.Ativo.Value)
+                usuario.Ativar();
+            else
+                usuario.Inativar();
+        }
 
         await uow.CommitAsync(ct);
 

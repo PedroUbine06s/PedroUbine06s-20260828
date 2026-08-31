@@ -17,3 +17,6 @@ public record CriarUsuarioDto(
 /// Senha nula = não alterar.
 /// </summary>
 public record AtualizarUsuarioDto([property: NaoNormalizar] string? Senha, bool Ativo);
+
+/// <summary>PATCH: campo ausente ou nulo significa "não alterar este campo".</summary>
+public record AtualizarParcialUsuarioDto([property: NaoNormalizar] string? Senha, bool? Ativo);

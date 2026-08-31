@@ -25,4 +25,9 @@ public class UsuariosController(IUsuarioService service) : ApiControllerBase
     {
         return DeResultado(await service.AtualizarAsync(id, dto, ct));
     }
+
+    /// <summary>PATCH: envie só o que muda — trocar a senha sem mexer no status, por exemplo.</summary>
+    [HttpPatch("{id:int}")]
+    public async Task<ActionResult> AtualizarParcial(int id, AtualizarParcialUsuarioDto dto, CancellationToken ct) =>
+        DeResultado(await service.AtualizarParcialAsync(id, dto, ct));
 }
