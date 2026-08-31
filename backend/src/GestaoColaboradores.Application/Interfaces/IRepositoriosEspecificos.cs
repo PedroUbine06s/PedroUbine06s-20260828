@@ -1,4 +1,5 @@
 using GestaoColaboradores.Application.Common;
+using GestaoColaboradores.Application.Dtos;
 using GestaoColaboradores.Domain.Entidades;
 
 namespace GestaoColaboradores.Application.Interfaces;
@@ -6,9 +7,8 @@ namespace GestaoColaboradores.Application.Interfaces;
 public interface IUsuarioRepository : IRepository<Usuario>
 {
     Task<Usuario?> ObterPorLoginAsync(string login, CancellationToken ct = default);
-    /// <param name="ativo">null = todos; true/false = filtro por status.</param>
     Task<(List<Usuario> Itens, int Total)> ListarPaginadoAsync(
-        bool? ativo, PaginacaoQuery paginacao, CancellationToken ct = default);
+        FiltroUsuarios filtro, PaginacaoQuery paginacao, CancellationToken ct = default);
     Task<bool> ExisteLoginAsync(string login, CancellationToken ct = default);
 }
 

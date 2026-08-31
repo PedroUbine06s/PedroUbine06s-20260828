@@ -140,10 +140,11 @@ public class UsuarioServiceTests
     public async Task Listar_RepassaOFiltroEMontaOEnvelopeDaPagina()
     {
         List<Usuario> pagina = [Usuario.Criar("USR000001", "admin", "h")];
-        _usuarioRepo.ListarPaginadoAsync(false, Arg.Any<PaginacaoQuery>(), Arg.Any<CancellationToken>())
+        var filtro = new FiltroUsuarios { Ativo = false };
+        _usuarioRepo.ListarPaginadoAsync(filtro, Arg.Any<PaginacaoQuery>(), Arg.Any<CancellationToken>())
             .Returns((pagina, 42));
 
-        var resultado = await CriarService().ListarAsync(false, new PaginacaoQuery { Pagina = 2, Tamanho = 10 });
+        var resultado = await CriarService().ListarAsync(filtro, new PaginacaoQuery { Pagina = 2, Tamanho = 10 });
 
         Assert.Single(resultado.Valor!.Itens);
         Assert.Equal(2, resultado.Valor.Pagina);
@@ -154,13 +155,33 @@ public class UsuarioServiceTests
     }
 
     [Fact]
-    public async Task Listar_SemFiltro_NaoRestringePorStatus()
+    public async Task Listar_SemFiltro_NaoRestringeNada()
     {
-        _usuarioRepo.ListarPaginadoAsync(null, Arg.Any<PaginacaoQuery>(), Arg.Any<CancellationToken>())
+        var vazio = new FiltroUsuarios();
+        _usuarioRepo.ListarPaginadoAsync(vazio, Arg.Any<PaginacaoQuery>(), Arg.Any<CancellationToken>())
             .Returns(([], 0));
 
-        await CriarService().ListarAsync(null, new PaginacaoQuery());
+        await CriarService().ListarAsync(vazio, new PaginacaoQuery());
 
-        await _usuarioRepo.Received().ListarPaginadoAsync(null, Arg.Any<PaginacaoQuery>(), Arg.Any<CancellationToken>());
+        // Ambos os filtros chegam nulos: o serviço não inventa restrição que o cliente não pediu.
+        await _usuarioRepo.Received().ListarPaginadoAsync(
+            Arg.Is<FiltroUsuarios>(f => f.Ativo == null && f.SemColaborador == null),
+            Arg.Any<PaginacaoQuery>(),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Listar_RepassaSemColaboradorAoRepositorio()
+    {
+        var filtro = new FiltroUsuarios { Ativo = true, SemColaborador = true };
+        _usuarioRepo.ListarPaginadoAsync(Arg.Any<FiltroUsuarios>(), Arg.Any<PaginacaoQuery>(), Arg.Any<CancellationToken>())
+            .Returns(([], 0));
+
+        await CriarService().ListarAsync(filtro, new PaginacaoQuery());
+
+        await _usuarioRepo.Received().ListarPaginadoAsync(
+            Arg.Is<FiltroUsuarios>(f => f.Ativo == true && f.SemColaborador == true),
+            Arg.Any<PaginacaoQuery>(),
+            Arg.Any<CancellationToken>());
     }
 }

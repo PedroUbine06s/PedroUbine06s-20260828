@@ -27,8 +27,11 @@ const TAMANHO_MAXIMO = 100;
 /**
  * Formulário de colaborador em modal, servindo criação e edição.
  *
- * O select de unidades lista apenas as ativas, porque a API recusa com 422 um
- * colaborador em unidade inativa — a tela evita o erro em vez de esperar por ele.
+ * Os dois selects oferecem apenas o que a API aceitaria: unidades ativas, porque
+ * unidade inativa recusa colaborador com 422, e usuários ainda sem colaborador,
+ * porque reusar um usuário dá 409. A tela evita os dois erros em vez de esperar por
+ * eles — mas o tratamento das respostas continua valendo, já que duas pessoas
+ * cadastrando ao mesmo tempo ainda podem disputar o mesmo usuário.
  * A exceção é a unidade atual de quem está sendo editado: se ela foi inativada
  * depois do cadastro, precisa continuar visível, senão editar só o nome moveria
  * o colaborador de unidade sem querer.
@@ -74,7 +77,11 @@ const TAMANHO_MAXIMO = 100;
             <cds-select
               formControlName="usuarioId"
               label="Usuário"
-              helperText="Cada usuário pertence a um único colaborador."
+              [helperText]="
+                semUsuarioDisponivel()
+                  ? 'Nenhum usuário disponível: todos os ativos já têm colaborador. Cadastre um usuário antes.'
+                  : 'Só aparecem usuários ativos que ainda não têm colaborador.'
+              "
             >
               <option value="">Selecione um usuário</option>
               @for (u of usuarios(); track u.id) {
@@ -118,6 +125,8 @@ export class ColaboradorFormComponent {
   readonly salvando = signal(false);
   readonly unidades = signal<Unidade[]>([]);
   readonly usuarios = signal<Usuario[]>([]);
+  /** Evita anunciar lista vazia enquanto as opções ainda estão sendo buscadas. */
+  readonly carregou = signal(false);
 
   /**
    * Unidades ativas, mais a unidade atual do colaborador em edição caso ela
@@ -137,7 +146,12 @@ export class ColaboradorFormComponent {
 
   /** Só bloqueia a criação: na edição a unidade atual continua disponível. */
   readonly semUnidadeAtiva = computed(
-    () => !this.colaborador() && this.unidadesSelecionaveis().length === 0
+    () => !this.colaborador() && this.carregou() && this.unidadesSelecionaveis().length === 0
+  );
+
+  /** O select de usuário só existe na criação, mas pode chegar vazio pelo filtro. */
+  readonly semUsuarioDisponivel = computed(
+    () => !this.colaborador() && this.carregou() && this.usuarios().length === 0
   );
 
   readonly form = this.fb.nonNullable.group({
@@ -204,11 +218,16 @@ export class ColaboradorFormComponent {
   private carregarOpcoes(): void {
     forkJoin({
       unidades: this.unidadesService.listar({ tamanho: TAMANHO_MAXIMO }),
-      usuarios: this.usuariosService.listar({ ativo: true, tamanho: TAMANHO_MAXIMO })
+      usuarios: this.usuariosService.listar({
+        ativo: true,
+        semColaborador: true,
+        tamanho: TAMANHO_MAXIMO
+      })
     }).subscribe({
       next: ({ unidades, usuarios }) => {
         this.unidades.set(unidades.itens);
         this.usuarios.set(usuarios.itens);
+        this.carregou.set(true);
 
         // O accessor do <select> escreve o valor no DOM antes de as <option>
         // existirem, e o navegador descarta um valor sem option correspondente:
@@ -219,7 +238,8 @@ export class ColaboradorFormComponent {
         });
       },
       error: () => {
-        /* O interceptor já notificou; os selects ficam vazios. */
+        // O interceptor já notificou. Não marca como carregado: um select vazio por
+        // falha de rede não é a mesma coisa que não haver ninguém elegível.
       }
     });
   }

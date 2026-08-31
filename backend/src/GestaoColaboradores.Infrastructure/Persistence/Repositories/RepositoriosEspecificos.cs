@@ -1,4 +1,5 @@
 using GestaoColaboradores.Application.Common;
+using GestaoColaboradores.Application.Dtos;
 using GestaoColaboradores.Application.Interfaces;
 using GestaoColaboradores.Domain.Entidades;
 using Microsoft.EntityFrameworkCore;
@@ -11,12 +12,22 @@ public class UsuarioRepository(AppDbContext context) : Repository<Usuario>(conte
         Set.FirstOrDefaultAsync(u => u.Login == login, ct);
 
     public async Task<(List<Usuario> Itens, int Total)> ListarPaginadoAsync(
-        bool? ativo, PaginacaoQuery paginacao, CancellationToken ct = default)
+        FiltroUsuarios filtro, PaginacaoQuery paginacao, CancellationToken ct = default)
     {
         var consulta = Set.AsNoTracking();
 
-        if (ativo is not null)
-            consulta = consulta.Where(u => u.Ativo == ativo.Value);
+        if (filtro.Ativo is not null)
+            consulta = consulta.Where(u => u.Ativo == filtro.Ativo.Value);
+
+        // A subconsulta vira EXISTS no SQL: o banco decide o vínculo, sem trazer colaborador
+        // algum para a memória. Filtrar isso no cliente exigiria varrer todas as páginas de
+        // colaboradores só para montar o conjunto de usuários já ocupados.
+        if (filtro.SemColaborador is not null)
+        {
+            consulta = filtro.SemColaborador.Value
+                ? consulta.Where(u => !Context.Colaboradores.Any(c => c.UsuarioId == u.Id))
+                : consulta.Where(u => Context.Colaboradores.Any(c => c.UsuarioId == u.Id));
+        }
 
         // A contagem roda sobre o mesmo filtro, antes do recorte: o total precisa refletir
         // o conjunto inteiro, não a página.

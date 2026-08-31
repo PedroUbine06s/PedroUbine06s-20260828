@@ -147,6 +147,51 @@ public class FluxosTests(ApiFactory factory) : IClassFixture<ApiFactory>
         Assert.All(pagina.Itens, u => Assert.False(u.Ativo));
     }
 
+    /// <summary>
+    /// Um usuário pertence a um único colaborador. Este filtro é o que permite ao portal
+    /// oferecer apenas quem é elegível, em vez de deixar a pessoa escolher e levar 409.
+    /// </summary>
+    [Fact]
+    public async Task ListarUsuarios_SemColaborador_DeixaDeTrazerQuemAcabouDeSerVinculado()
+    {
+        var client = await factory.CriarClienteAutenticadoAsync();
+        var usuario = await CriarUsuarioAsync(client, $"livre.{Guid.NewGuid():N}"[..20]);
+        var unidade = await UnidadeDoSeedAsync(client, ativa: true);
+
+        // Antes do vínculo, o usuário aparece entre os elegíveis.
+        var elegiveis = await client.GetFromJsonAsync<PaginaDto<UsuarioRespostaDto>>(
+            "/api/v1/usuarios?semColaborador=true&tamanho=100");
+        Assert.Contains(elegiveis!.Itens, u => u.Id == usuario.Id);
+
+        var criado = await client.PostAsJsonAsync("/api/v1/colaboradores",
+            new CriarColaboradorDto("Fulano Vinculado", unidade.Id, usuario.Id));
+        criado.EnsureSuccessStatusCode();
+
+        // Depois do vínculo, some da lista de elegíveis e passa a constar na complementar.
+        var aindaElegiveis = await client.GetFromJsonAsync<PaginaDto<UsuarioRespostaDto>>(
+            "/api/v1/usuarios?semColaborador=true&tamanho=100");
+        Assert.DoesNotContain(aindaElegiveis!.Itens, u => u.Id == usuario.Id);
+
+        var vinculados = await client.GetFromJsonAsync<PaginaDto<UsuarioRespostaDto>>(
+            "/api/v1/usuarios?semColaborador=false&tamanho=100");
+        Assert.Contains(vinculados!.Itens, u => u.Id == usuario.Id);
+    }
+
+    /// <summary>É esta a consulta que o portal faz ao abrir "Novo colaborador".</summary>
+    [Fact]
+    public async Task ListarUsuarios_CombinandoAtivoESemColaborador_AplicaOsDoisFiltros()
+    {
+        var client = await factory.CriarClienteAutenticadoAsync();
+
+        var pagina = await client.GetFromJsonAsync<PaginaDto<UsuarioRespostaDto>>(
+            "/api/v1/usuarios?ativo=true&semColaborador=true&tamanho=100");
+
+        Assert.All(pagina!.Itens, u => Assert.True(u.Ativo));
+        // carlos.lima não tem colaborador, mas está inativo: o segundo filtro não pode
+        // anular o primeiro.
+        Assert.DoesNotContain(pagina.Itens, u => u.Login == "carlos.lima");
+    }
+
     [Fact]
     public async Task ListarUsuarios_NuncaExpoeSenha()
     {

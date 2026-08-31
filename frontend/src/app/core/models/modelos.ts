@@ -30,6 +30,16 @@ export interface Usuario {
   ativo: boolean;
 }
 
+/**
+ * Filtros da listagem de usuários — espelha o FiltroUsuarios da API.
+ * Campo ausente significa "não filtrar".
+ */
+export interface FiltroUsuarios extends ParametrosPaginacao {
+  ativo?: boolean;
+  /** true = apenas usuários que ainda não têm colaborador (regra 1:1). */
+  semColaborador?: boolean;
+}
+
 /** O código é gerado pelo sistema (USR000001), por isso não é informado. */
 export interface CriarUsuario {
   login: string;

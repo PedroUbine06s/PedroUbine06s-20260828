@@ -9,11 +9,14 @@ namespace GestaoColaboradores.Api.Controllers;
 [Authorize]
 public class UsuariosController(IUsuarioService service) : ApiControllerBase
 {
-    /// <summary>Lista os usuários. Informe <c>ativo</c> para filtrar por status.</summary>
+    /// <summary>
+    /// Lista os usuários. <c>ativo</c> filtra por status e <c>semColaborador</c> restringe aos
+    /// que ainda não têm colaborador — é o que permite ao portal oferecer só quem é elegível.
+    /// </summary>
     [HttpGet]
     [ProducesResponseType(typeof(PaginaDto<UsuarioRespostaDto>), StatusCodes.Status200OK)]
-    public async Task<ActionResult> Listar([FromQuery] bool? ativo, [FromQuery] PaginacaoQuery paginacao, CancellationToken ct) =>
-        DeResultado(await service.ListarAsync(ativo, paginacao, ct));
+    public async Task<ActionResult> Listar([FromQuery] FiltroUsuarios filtro, [FromQuery] PaginacaoQuery paginacao, CancellationToken ct) =>
+        DeResultado(await service.ListarAsync(filtro, paginacao, ct));
 
     /// <summary>Retorna um usuário pelo id.</summary>
     [HttpGet("{id:guid}")]

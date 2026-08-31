@@ -13,7 +13,7 @@ public interface IUsuarioService
     Task<Result<UsuarioRespostaDto>> AtualizarParcialAsync(Guid id, AtualizarParcialUsuarioDto dto, CancellationToken ct = default);
     /// <param name="ativo">null = todos; true/false = filtro por status (requisito do enunciado).</param>
     Task<Result<PaginaDto<UsuarioRespostaDto>>> ListarAsync(
-        bool? ativo, PaginacaoQuery paginacao, CancellationToken ct = default);
+        FiltroUsuarios filtro, PaginacaoQuery paginacao, CancellationToken ct = default);
 }
 
 public class UsuarioService(
@@ -94,9 +94,9 @@ public class UsuarioService(
     }
 
     public async Task<Result<PaginaDto<UsuarioRespostaDto>>> ListarAsync(
-        bool? ativo, PaginacaoQuery paginacao, CancellationToken ct = default)
+        FiltroUsuarios filtro, PaginacaoQuery paginacao, CancellationToken ct = default)
     {
-        var (itens, total) = await usuarioRepo.ListarPaginadoAsync(ativo, paginacao, ct);
+        var (itens, total) = await usuarioRepo.ListarPaginadoAsync(filtro, paginacao, ct);
 
         return Result<PaginaDto<UsuarioRespostaDto>>.Sucesso(
             new PaginaDto<UsuarioRespostaDto>(
