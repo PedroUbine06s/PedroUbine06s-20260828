@@ -1,6 +1,7 @@
 using GestaoColaboradores.Application.Common;
 using GestaoColaboradores.Application.Dtos;
 using GestaoColaboradores.Application.Interfaces;
+using GestaoColaboradores.Domain.Entidades;
 
 namespace GestaoColaboradores.Application.Services;
 
@@ -14,22 +15,56 @@ public interface IUnidadeService
 
 public class UnidadeService(IUnidadeRepository unidadeRepo, IUnitOfWork uow) : IUnidadeService
 {
-    public Task<Result<UnidadeRespostaDto>> CriarAsync(CriarUnidadeDto dto, CancellationToken ct = default)
+    public async Task<Result<UnidadeRespostaDto>> CriarAsync(CriarUnidadeDto dto, CancellationToken ct = default)
     {
-        // TODO: ExisteCodigoAsync → 409; Unidade.Criar; Adicionar + Commit
-        throw new NotImplementedException();
+        if (await unidadeRepo.ExisteCodigoAsync(dto.Codigo, ct))
+            return Result<UnidadeRespostaDto>.Falha($"Já existe uma unidade com o código '{dto.Codigo}'.", TipoErro.Conflito);
+
+        var unidade = Unidade.Criar(dto.Codigo, dto.Nome);
+
+        await unidadeRepo.AdicionarAsync(unidade, ct);
+        await uow.CommitAsync(ct);
+
+        return Result<UnidadeRespostaDto>.Sucesso(ParaDto(unidade));
     }
 
-    public Task<Result<UnidadeRespostaDto>> AtualizarAsync(int id, AtualizarUnidadeDto dto, CancellationToken ct = default)
+    public async Task<Result<UnidadeRespostaDto>> AtualizarAsync(int id, AtualizarUnidadeDto dto, CancellationToken ct = default)
     {
-        // TODO: buscar (404); AlterarNome; dto.Ativo ? Ativar() : Inativar(); Commit.
-        // A partir da inativação, ColaboradorService.CriarAsync passa a devolver 422 — sem código extra aqui.
-        throw new NotImplementedException();
+        var unidade = await unidadeRepo.ObterPorIdAsync(id, ct);
+
+        if (unidade is null)
+            return Result<UnidadeRespostaDto>.Falha($"Unidade {id} não encontrada.", TipoErro.NaoEncontrado);
+
+        unidade.AlterarNome(dto.Nome);
+
+        if (dto.Ativo)
+            unidade.Ativar();
+        else
+            unidade.Inativar();
+
+        await uow.CommitAsync(ct);
+
+        return Result<UnidadeRespostaDto>.Sucesso(ParaDto(unidade));
     }
 
-    public Task<Result<List<UnidadeComColaboradoresDto>>> ListarAsync(CancellationToken ct = default)
+    public async Task<Result<List<UnidadeComColaboradoresDto>>> ListarAsync(CancellationToken ct = default)
     {
-        // TODO: ListarComColaboradoresAsync + mapear para DTO
-        throw new NotImplementedException();
+        var unidades = await unidadeRepo.ListarComColaboradoresAsync(ct);
+
+        var dtos = unidades
+            .Select(u => new UnidadeComColaboradoresDto(
+                u.Id,
+                u.Codigo,
+                u.Nome,
+                u.Ativo,
+                u.Colaboradores
+                    .Select(c => new ColaboradorRespostaDto(c.Id, c.Codigo, c.Nome, u.Codigo, u.Nome))
+                    .ToList()))
+            .ToList();
+
+        return Result<List<UnidadeComColaboradoresDto>>.Sucesso(dtos);
     }
+
+    private static UnidadeRespostaDto ParaDto(Unidade u) =>
+        new(u.Id, u.Codigo, u.Nome, u.Ativo);
 }

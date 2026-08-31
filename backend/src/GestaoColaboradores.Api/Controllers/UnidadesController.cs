@@ -16,15 +16,12 @@ public class UnidadesController(IUnidadeService service) : ApiControllerBase
     [HttpPost]
     public async Task<ActionResult> Criar(CriarUnidadeDto dto, CancellationToken ct)
     {
-        // TODO
-        throw new NotImplementedException();
+        var resultado = await service.CriarAsync(dto, ct);
+        return Criado(resultado, nameof(Listar), new { });
     }
 
     /// <summary>Inativar por aqui: a partir daí o POST de colaborador nessa unidade responde 422.</summary>
     [HttpPut("{id:int}")]
-    public async Task<ActionResult> Atualizar(int id, AtualizarUnidadeDto dto, CancellationToken ct)
-    {
-        // TODO
-        throw new NotImplementedException();
-    }
+    public async Task<ActionResult> Atualizar(int id, AtualizarUnidadeDto dto, CancellationToken ct) =>
+        DeResultado(await service.AtualizarAsync(id, dto, ct));
 }

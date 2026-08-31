@@ -17,7 +17,7 @@ public class AuthService(
     IPasswordHasher hasher,
     ITokenService tokenService) : IAuthService
 {
-    public async  Task<Result<TokenRespostaDto>> LoginAsync(LoginDto dto, CancellationToken ct = default)
+    public async Task<Result<TokenRespostaDto>> LoginAsync(LoginDto dto, CancellationToken ct = default)
     {
         const string credenciaisInvalidas = "Login ou senha inválidos.";
 

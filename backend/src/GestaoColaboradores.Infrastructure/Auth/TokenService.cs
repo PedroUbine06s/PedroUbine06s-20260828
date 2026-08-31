@@ -13,7 +13,7 @@ public class TokenService(IOptions<JwtSettings> options) : ITokenService
     private readonly JwtSettings _settings = options.Value;
 
     public TokenGerado GerarToken(Usuario usuario)
-    {   
+    {
         var expiraEm = DateTime.UtcNow.AddMinutes(_settings.ExpiracaoMinutos);
 
         var claims = new[]
