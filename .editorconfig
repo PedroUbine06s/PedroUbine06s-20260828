@@ -1,0 +1,67 @@
+# Convenções de código do projeto. Reconhecido nativamente por VS Code, Visual
+# Studio e Rider, e aplicado por `dotnet format`.
+root = true
+
+[*]
+charset = utf-8
+indent_style = space
+trim_trailing_whitespace = true
+insert_final_newline = true
+
+[*.{json,yml,yaml,ts,html,css}]
+indent_size = 2
+
+[*.cs]
+indent_size = 4
+
+# Usings do System primeiro, sem linha em branco entre grupos
+dotnet_sort_system_directives_first = true
+dotnet_separate_import_directive_groups = false
+
+# Namespace em uma linha só, como o resto do projeto
+csharp_style_namespace_declarations = file_scoped:warning
+
+# var quando o tipo já é evidente na linha
+csharp_style_var_when_type_is_apparent = true:suggestion
+csharp_style_var_elsewhere = false:suggestion
+
+# Chaves em linha própria (Allman)
+csharp_new_line_before_open_brace = all
+csharp_new_line_before_else = true
+csharp_new_line_before_catch = true
+csharp_new_line_before_finally = true
+
+# Espaçamento — é o que pega "if(" e "metodo(a,b)"
+csharp_space_after_keywords_in_control_flow_statements = true
+csharp_space_after_comma = true
+csharp_space_before_comma = false
+csharp_space_around_binary_operators = before_and_after
+
+# Preferências modernas já usadas no projeto
+csharp_style_prefer_primary_constructors = true:suggestion
+csharp_style_expression_bodied_methods = when_on_single_line:suggestion
+csharp_prefer_simple_using_statement = true:suggestion
+dotnet_style_prefer_is_null_check_over_reference_equality_method = true:suggestion
+csharp_style_prefer_null_check_over_type_check = true:suggestion
+
+# Nomenclatura: campos privados com _ , constantes em PascalCase
+dotnet_naming_rule.campos_privados.severity = suggestion
+dotnet_naming_rule.campos_privados.symbols = campo_privado
+dotnet_naming_rule.campos_privados.style = underscore_camel
+dotnet_naming_symbols.campo_privado.applicable_kinds = field
+dotnet_naming_symbols.campo_privado.applicable_accessibilities = private
+dotnet_naming_style.underscore_camel.required_prefix = _
+dotnet_naming_style.underscore_camel.capitalization = camel_case
+
+dotnet_naming_rule.constantes.severity = suggestion
+dotnet_naming_rule.constantes.symbols = constante
+dotnet_naming_rule.constantes.style = pascal
+dotnet_naming_symbols.constante.applicable_kinds = field
+dotnet_naming_symbols.constante.required_modifiers = const
+dotnet_naming_style.pascal.capitalization = pascal_case
+
+# Migrations são geradas pelo EF Core: não fazem sentido sob as regras de código
+# escrito à mão, e o EF as recriaria no formato dele na próxima migration.
+[**/Migrations/*.cs]
+generated_code = true
+dotnet_analyzer_diagnostic.severity = none

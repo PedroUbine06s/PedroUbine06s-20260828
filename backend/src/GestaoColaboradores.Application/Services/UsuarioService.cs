@@ -20,33 +20,50 @@ public class UsuarioService(
 {
     public async Task<Result<UsuarioRespostaDto>> CriarAsync(CriarUsuarioDto dto, CancellationToken ct = default)
     {
-        if(await usuarioRepo.ExisteCodigoAsync(dto.Codigo, ct))
+        if (await usuarioRepo.ExisteCodigoAsync(dto.Codigo, ct))
             return Result<UsuarioRespostaDto>.Falha($"Já existe um usuário com o código '{dto.Codigo}'", TipoErro.Conflito);
-        if(await usuarioRepo.ExisteLoginAsync(dto.Login, ct))
+        if (await usuarioRepo.ExisteLoginAsync(dto.Login, ct))
             return Result<UsuarioRespostaDto>.Falha($"Já existe um usuário com o login '{dto.Login}'", TipoErro.Conflito);
 
         var usuario = Usuario.Criar(dto.Codigo, dto.Login, hasher.Hash(dto.Senha));
 
-        if(!dto.Ativo) usuario.Inativar();
+        if (!dto.Ativo) usuario.Inativar();
 
-        await usuarioRepo.AdicionarAsync(usuario,ct);
+        await usuarioRepo.AdicionarAsync(usuario, ct);
         await uow.CommitAsync(ct);
 
         return Result<UsuarioRespostaDto>.Sucesso(ParaDto(usuario));
     }
 
-    public Task<Result<UsuarioRespostaDto>> AtualizarAsync(int id, AtualizarUsuarioDto dto, CancellationToken ct = default)
+    public async Task<Result<UsuarioRespostaDto>> AtualizarAsync(int id, AtualizarUsuarioDto dto, CancellationToken ct = default)
     {
-        // TODO: buscar por id (404), aplicar SOMENTE senha (se informada, via hasher) e status.
-        throw new NotImplementedException();
+        var usuario = await usuarioRepo.ObterPorIdAsync(id, ct);
+
+        if (usuario is null)
+            return Result<UsuarioRespostaDto>.Falha($"Usuário {id} não encontrado.", TipoErro.NaoEncontrado);
+
+        if (!string.IsNullOrWhiteSpace(dto.Senha))
+            usuario.AlterarSenha(hasher.Hash(dto.Senha));
+
+        if (dto.Ativo)
+            usuario.Ativar();
+        else
+            usuario.Inativar();
+
+        await uow.CommitAsync(ct);
+
+        return Result<UsuarioRespostaDto>.Sucesso(ParaDto(usuario));
     }
 
-    public Task<Result<List<UsuarioRespostaDto>>> ListarAsync(bool? ativo, CancellationToken ct = default)
+    public async Task<Result<List<UsuarioRespostaDto>>> ListarAsync(bool? ativo, CancellationToken ct = default)
     {
-        // TODO: ativo is null ? ListarAsync : ListarPorStatusAsync
-        throw new NotImplementedException();
+        var usuarios = ativo is null
+            ? await usuarioRepo.ListarAsync(ct)
+            : await usuarioRepo.ListarPorStatusAsync(ativo.Value, ct);
+
+        return Result<List<UsuarioRespostaDto>>.Sucesso(usuarios.Select(ParaDto).ToList());
     }
 
     private static UsuarioRespostaDto ParaDto(Usuario u) =>
-        new (u.Id, u.Codigo, u.Login, u.Ativo);
+        new(u.Id, u.Codigo, u.Login, u.Ativo);
 }

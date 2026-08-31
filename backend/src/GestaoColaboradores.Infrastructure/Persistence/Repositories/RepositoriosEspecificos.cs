@@ -9,15 +9,13 @@ public class UsuarioRepository(AppDbContext context) : Repository<Usuario>(conte
     public Task<Usuario?> ObterPorLoginAsync(string login, CancellationToken ct = default) =>
         Set.FirstOrDefaultAsync(u => u.Login == login, ct);
 
-    public Task<List<Usuario>> ListarPorStatusAsync(bool ativo, CancellationToken ct = default)
-    {
-        // TODO: filtrar por Ativo == ativo, AsNoTracking
-        throw new NotImplementedException();
-    }
+    public Task<List<Usuario>> ListarPorStatusAsync(bool ativo, CancellationToken ct = default) =>
+         Set.AsNoTracking().Where(u => u.Ativo == ativo).OrderBy(u => u.Login).ToListAsync(ct);
+
 
     public Task<bool> ExisteLoginAsync(string login, CancellationToken ct = default) =>
         Set.AnyAsync(e => e.Login == login, ct);
-    
+
 }
 
 public class ColaboradorRepository(AppDbContext context) : Repository<Colaborador>(context), IColaboradorRepository
