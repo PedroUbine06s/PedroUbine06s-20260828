@@ -14,8 +14,17 @@ docker compose up
 - **Portal:** `cd frontend && npm install && npm start` → http://localhost:4200
 - **Login de avaliação:** `admin` / `admin123`
 
-> O startup aplica as migrations e semeia o banco automaticamente — inclusive uma
-> unidade **inativa** (`UNI-002`) para testar a regra de bloqueio na hora.
+O startup aplica as migrations e semeia o banco automaticamente. Os dados iniciais foram
+escolhidos para que cada requisito seja testável sem preparo:
+
+| Dado | Situação | Serve para testar |
+|------|----------|-------------------|
+| `UNI-001` Matriz | ativa, 2 colaboradores | cadastro normal de colaborador |
+| `UNI-002` Filial Centro | **inativa**, 1 colaborador | **422** ao tentar incluir novo colaborador, e que inativar não desvincula quem já estava |
+| `USR-001` admin | ativo | login (`admin` / `admin123`) |
+| `USR-005` carlos.lima | **inativo** | filtro `GET /usuarios?ativo=false` e recusa de login |
+
+Os demais usuários usam a senha `senha123`.
 
 ## Arquitetura
 
