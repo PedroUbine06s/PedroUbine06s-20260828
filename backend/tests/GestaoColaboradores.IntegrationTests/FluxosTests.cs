@@ -326,22 +326,20 @@ public class FluxosTests(ApiFactory factory) : IClassFixture<ApiFactory>
     }
 
     /// <summary>
-    /// Rede de segurança: mesmo que uma checagem prévia falhe ou perca a corrida, uma
-    /// violação de índice único precisa virar 409 — nunca 500.
+    /// Exercita o BCrypt de verdade no caminho "login não existe" — o único lugar onde o
+    /// hash descartável é usado. Os testes de unidade mockam o hasher e não alcançam isto.
     /// </summary>
     [Fact]
-    public async Task ViolacaoDeIndiceUnico_NuncaVira500()
+    public async Task Login_ComLoginInexistente_Responde401SemErroDeFormato()
     {
-        var client = await factory.CriarClienteAutenticadoAsync();
-        var unidade = await UnidadeDoSeedAsync(client, ativa: true);
-        var usuario = await CriarUsuarioAsync(client, "corrida.simulada");
+        var client = factory.CreateClient();
 
-        await client.PostAsJsonAsync("/api/v1/colaboradores",
-            new CriarColaboradorDto("Primeiro", unidade.Id, usuario.Id));
+        var resposta = await client.PostAsJsonAsync("/api/v1/auth/login",
+            new LoginDto("nao.existe.em.lugar.nenhum", "qualquerSenha123"));
 
-        var segundo = await client.PostAsJsonAsync("/api/v1/colaboradores",
-            new CriarColaboradorDto("Segundo", unidade.Id, usuario.Id));
+        Assert.Equal(HttpStatusCode.Unauthorized, resposta.StatusCode);
 
-        Assert.NotEqual(HttpStatusCode.InternalServerError, segundo.StatusCode);
+        var corpo = await resposta.Content.ReadAsStringAsync();
+        Assert.Contains("inválidos", corpo, StringComparison.OrdinalIgnoreCase);
     }
 }

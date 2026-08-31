@@ -30,7 +30,6 @@ public class UsuarioConfiguration : IEntityTypeConfiguration<Usuario>
         builder.HasKey(u => u.Id);
         builder.Property(u => u.Id).ValueGeneratedNever();
         ConfigurarConcorrencia(builder);
-        ConfigurarConcorrencia(builder);
         builder.Property(u => u.Codigo).HasMaxLength(BaseEntity.TamanhoMaximoCodigo).IsRequired();
         builder.HasIndex(u => u.Codigo).IsUnique();
         builder.Property(u => u.Login).HasMaxLength(Usuario.TamanhoMaximoLogin).IsRequired();
@@ -72,6 +71,7 @@ public class UnidadeConfiguration : IEntityTypeConfiguration<Unidade>
         builder.ToTable("unidades");
         builder.HasKey(u => u.Id);
         builder.Property(u => u.Id).ValueGeneratedNever();
+        ConfigurarConcorrencia(builder);
         builder.Property(u => u.Codigo).HasMaxLength(BaseEntity.TamanhoMaximoCodigo).IsRequired();
         builder.HasIndex(u => u.Codigo).IsUnique();
         builder.Property(u => u.Nome).HasMaxLength(Unidade.TamanhoMaximoNome).IsRequired();

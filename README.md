@@ -82,7 +82,10 @@ concorrência entre requisições simultâneas é resolvida pelo índice único,
   garantida por índice único e checada antes de inserir, devolvendo **409**.
 - **Senhas:** BCrypt; hash jamais exposto em resposta.
 - **Rate limiting só no login** — é o endpoint que um atacante repete milhares de vezes, e
-  cada tentativa custa um BCrypt ao servidor. A janela é por IP, para que um atacante não
+  cada tentativa custa um BCrypt ao servidor. Esse custo é consequência direta da defesa
+  contra enumeração: o hash roda mesmo quando o login não existe, então uma requisição
+  inválida passou de ~1 ms para ~100 ms de CPU. A troca é deliberada, e o rate limiting é o
+  que impede que ela vire um vetor de exaustão. A janela é por IP, para que um atacante não
   consiga trancar a porta dos demais, e o limite é configurável (`RateLimit:LoginPorMinuto`)
   porque esse é um número que operação ajusta, não desenvolvimento.
 - **Concorrência otimista por token de versão** — cada entidade tem um `Versao` que muda a
@@ -159,7 +162,16 @@ As listagens são **paginadas** e devolvem `{ itens, pagina, tamanho, total, tot
 O padrão é 20 itens e o teto é 100 — sem teto, `?tamanho=1000000` reproduziria justamente o
 problema que a paginação evita. `GET /health` verifica a API e o banco, e não exige token.
 
-Erros seguem **ProblemDetails (RFC 7807)**.
+Erros seguem **ProblemDetails (RFC 7807)**, e o corpo é montado pela mesma
+`ProblemDetailsFactory` tanto nos erros de regra quanto nos traduzidos pelo middleware — um
+409 é indistinguível vindo de um caminho ou do outro.
+
+**Limitação conhecida:** o middleware traduz *qualquer* violação de unicidade do banco em 409.
+Se uma sequence de código dessincronizasse do conteúdo da tabela (um restore de dump sem
+`setval`, por exemplo), o cliente receberia 409 por um campo que ele nem envia, já que o código
+é gerado pelo sistema. Distinguir exigiria acoplar o middleware a nomes de constraint gerados
+pelo EF, que quebram silenciosamente ao renomear uma entidade — preferi a falha genérica à
+frágil, e registrá-la aqui.
 A collection do Postman em [`postman/`](postman/) tem 30 requisições cobrindo os caminhos
 felizes e os de erro (401, 400, 404, 409, 422), com testes automáticos que verificam o status
 e o corpo. O login salva o token no environment, então basta rodá-lo primeiro.
@@ -171,13 +183,13 @@ cd backend
 dotnet test
 ```
 
-**86 testes**, divididos em duas suítes com propósitos distintos.
+**88 testes**, divididos em duas suítes com propósitos distintos.
 
 Os **62 de unidade** (xUnit + NSubstitute) rodam em ~100 ms e cobrem o domínio sem mock algum
 e os serviços com repositórios simulados. Eles verificam efeito, não só retorno: quando uma
 regra falha, o teste assere que `CommitAsync` **não** foi chamado.
 
-Os **24 de integração** (`WebApplicationFactory` + **Testcontainers**) sobem um PostgreSQL real
+Os **26 de integração** (`WebApplicationFactory` + **Testcontainers**) sobem um PostgreSQL real
 em contêiner e exercitam HTTP de ponta a ponta — pipeline de autenticação, validação, migrations
 e seed inclusos. Não se usa InMemory provider aqui de propósito: ele não tem índice único, e é
 justamente o índice que garante a unicidade de código e login.

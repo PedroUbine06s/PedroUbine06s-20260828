@@ -5,6 +5,7 @@ public interface IPasswordHasher
 {
     string Hash(string senha);
     bool Verificar(string senha, string hash);
+    string HashDescartavel { get; }
 }
 
 public record TokenGerado(string Token, DateTime ExpiraEm);

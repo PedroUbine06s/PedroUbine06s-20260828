@@ -18,7 +18,7 @@ public interface IUsuarioService
 
 public class UsuarioService(
     IUsuarioRepository usuarioRepo,
-    IPasswordHasher hasher,      
+    IPasswordHasher hasher,
     IGeradorCodigo gerador,
     IUnitOfWork uow) : IUsuarioService
 {
