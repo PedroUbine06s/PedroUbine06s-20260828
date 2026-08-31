@@ -239,6 +239,28 @@ componente do Carbon exige um `TableModel` imperativo, populado com `TableItem[]
 brigaria com signals e tornaria trabalhoso pôr botões de ação nas células. Os componentes
 interativos — botão, campo, select, modal, toast, tag, paginação — são os do Carbon.
 
+### Sessão e estado de navegação
+
+O JWT fica em `localStorage` e o signal do `AuthService` é inicializado a partir dele, então
+recarregar não desloga. O guard chama `sessaoValida()`, que reavalia o `exp` do token a cada
+navegação, em vez de apenas checar se existe token guardado: sem isso, um token vencido
+passava pelo guard, a tela protegida montava, disparava a requisição e só o 401 devolvia a
+pessoa ao login — um piscar da tela antes do chute.
+
+Ler o `exp` no cliente é decisão de experiência, não de segurança: o payload é base64 e
+qualquer um forja uma validade no futuro. Quem valida assinatura é a API, e é ela que
+continua decidindo o 401 — o interceptor segue tratando esse caso.
+
+`localStorage` é legível por qualquer script injetado na página. A alternativa robusta é
+cookie `httpOnly` com proteção CSRF, que move a decisão para o servidor; ficou de fora porque
+exigiria emissão de cookie, CORS com credenciais e token anti-CSRF, e o custo não se paga no
+recorte deste teste. É um tradeoff assumido, não um esquecimento.
+
+Página e filtro de status vivem na **query string**, não em signal local. O componente lê
+`queryParamMap` e recarrega quando ele muda, então recarregar a página, usar o botão voltar
+e compartilhar `/usuarios?status=inativos` funcionam sem código extra. A página 1 é omitida
+da URL para não sujar o link com o valor padrão.
+
 ### O que a tela impede antes de a API recusar
 
 O select de unidades lista **apenas as ativas**: como a API recusa com 422 um colaborador em
@@ -268,7 +290,6 @@ autoridade continua no servidor; a tela só evita o caminho previsível.
   incluindo os caminhos de 409 e de unidade inativa.
 - Os selects de apoio carregam com `?tamanho=100`, o teto da API. Acima disso seria preciso
   um campo com busca no servidor — o filtro já é server-side, falta só a busca por texto.
-- A paginação é por página cheia, sem preservar o estado na URL: recarregar volta à página 1.
 
 ## Desenvolvimento local
 
