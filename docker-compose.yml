@@ -34,19 +34,27 @@ services:
     ports:
       - "5000:8080"
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/health || exit 1"]
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/health || exit 1"]
       interval: 10s
       timeout: 3s
       retries: 5
       start_period: 20s
 
-  # TODO (opcional): frontend servido por nginx
-  # web:
-  #   build: ./frontend
-  #   ports:
-  #     - "4200:80"
-  #   depends_on:
-  #     - api
+  web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: gestao-web
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "4200:80"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost/ >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
 
 volumes:
   gestao-pgdata:

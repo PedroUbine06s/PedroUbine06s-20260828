@@ -11,9 +11,14 @@ cobrindo o CRUD das três entidades e a regra de que unidade inativa não recebe
 docker compose up
 ```
 
+Um comando sobe o sistema inteiro — banco, API e portal:
+
+- **Portal:** http://localhost:4200
 - **API + Swagger:** http://localhost:5000/swagger
-- **Portal:** `cd frontend && npm install && npm start` → http://localhost:4200
 - **Login de avaliação:** `admin` / `admin123`
+
+O portal é servido por nginx a partir do build de produção, e não pelo `ng serve`. Não é
+preciso ter Node na máquina para avaliar o projeto.
 
 O startup aplica as migrations e semeia o banco automaticamente. Os dados iniciais foram
 escolhidos para que cada requisito seja testável sem preparo:
@@ -201,6 +206,29 @@ usuário na mesma transação; o filtro `semColaborador` deixa de listar um usu�
 ganha colaborador, e não anula o filtro de status quando os dois vêm juntos; o `PUT` recusa corpo incompleto enquanto o `PATCH` aceita; e duas criações seguidas nunca
 recebem o mesmo código, o que cobra o comportamento da sequence.
 
+### Testes do portal
+
+```bash
+cd frontend
+npm test
+```
+
+**33 testes** com Vitest, pelo builder `@angular/build:unit-test`. Vitest e não Karma porque
+o Karma está em depreciação no Angular e o Vitest roda headless, sem depender de um Chrome
+instalado na máquina.
+
+O alvo mais valioso é a expiração do token: cobre válido, vencido, sem `exp`, `exp` que não é
+número e token corrompido — um valor estragado no `localStorage` não pode derrubar a
+aplicação no boot. Cobre também o caso que motivou o conserto do guard: o token que vence com
+a aba aberta, em que nenhum signal muda e só recalcular na hora percebe.
+
+Nos serviços a asserção é sobre a query string, porque é ali que o contrato mora: filtro
+ausente e filtro `false` são coisas diferentes, e `ativo=false` precisa ser enviado em vez de
+omitido por ser falso.
+
+A suíte foi conferida contra regressão proposital — desativando a checagem de expiração,
+exatamente os dois testes dela falham.
+
 ## Portal
 
 ```bash
@@ -238,6 +266,23 @@ As tabelas usam as classes `cds--data-table` sobre markup nativo, e não o `cds-
 componente do Carbon exige um `TableModel` imperativo, populado com `TableItem[][]`, que
 brigaria com signals e tornaria trabalhoso pôr botões de ação nas células. Os componentes
 interativos — botão, campo, select, modal, toast, tag, paginação — são os do Carbon.
+
+### Como o portal é servido
+
+A imagem do portal é multi-stage: o Node builda e some, e a imagem final tem só o nginx com
+os arquivos estáticos. O nginx faz duas coisas que o `ng serve` fazia em desenvolvimento —
+devolve o `index.html` para qualquer rota desconhecida, sem o que abrir
+`/usuarios?status=inativos` direto daria 404, e encaminha `/api/` para o contêiner da API,
+no lugar do `proxy.conf.json`.
+
+Uma consequência de pôr um proxy na frente: o rate limit do login conta por IP, e com o
+nginx no caminho a API enxerga o IP do contêiner para todo mundo. No recorte de avaliação
+isso não muda nada — o 429 continua acontecendo —, mas num ambiente real o limite passaria a
+ser global em vez de por cliente, e a correção seria honrar o `X-Forwarded-For` com
+`UseForwardedHeaders` e uma lista de proxies confiáveis.
+
+Para desenvolver o front com recarga automática, o caminho continua sendo
+`cd frontend && npm install && npm start`, que usa o proxy do `ng serve`.
 
 ### Sessão e estado de navegação
 
@@ -285,9 +330,9 @@ autoridade continua no servidor; a tela só evita o caminho previsível.
 
 ### Limitações conscientes
 
-- **Sem testes de frontend.** O esforço foi para as funcionalidades do portal; a suíte de
-  testes do projeto é a do backend. As telas foram verificadas manualmente no navegador,
-  incluindo os caminhos de 409 e de unidade inativa.
+- Os componentes de tela não têm teste automatizado: a suíte de front cobre serviços e
+  sessão, e as telas foram verificadas no navegador, incluindo os caminhos de 409, de
+  unidade inativa e de token expirado.
 - Os selects de apoio carregam com `?tamanho=100`, o teto da API. Acima disso seria preciso
   um campo com busca no servidor — o filtro já é server-side, falta só a busca por texto.
 
