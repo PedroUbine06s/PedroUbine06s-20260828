@@ -1,14 +1,14 @@
-import { Component, input } from '@angular/core';
+import { Component, computed, input } from '@angular/core';
+import { TagModule } from 'carbon-components-angular/tag';
 
-/** Componente compartilhado: badge visual de status usado em todas as listagens. */
+/** Badge de status usado em todas as listagens. */
 @Component({
   selector: 'app-status-badge',
-  template: `<span class="badge" [class.ativo]="ativo()">{{ ativo() ? 'Ativo' : 'Inativo' }}</span>`,
-  styles: `
-    .badge { padding: .15rem .6rem; border-radius: 1rem; font-size: .8rem; background: #fde3e3; color: #a12020; }
-    .badge.ativo { background: #e0f4e4; color: #1c7c34; }
-  `
+  imports: [TagModule],
+  template: `<cds-tag [type]="ativo() ? 'green' : 'gray'">{{ rotulo() }}</cds-tag>`
 })
 export class StatusBadgeComponent {
   readonly ativo = input.required<boolean>();
+
+  readonly rotulo = computed(() => (this.ativo() ? 'Ativo' : 'Inativo'));
 }

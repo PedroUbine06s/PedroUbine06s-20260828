@@ -1,38 +1,52 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
+import { ButtonModule } from 'carbon-components-angular/button';
+import { InputModule } from 'carbon-components-angular/input';
 import { AuthService } from '../../core/services/auth.service';
 
-/** COMPONENTE DE REFERÊNCIA — Reactive Forms + signals + tratamento de erro. */
 @Component({
   selector: 'app-login',
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, ButtonModule, InputModule],
   template: `
     <form class="cartao" [formGroup]="form" (ngSubmit)="entrar()">
-      <h1>Entrar</h1>
+      <div>
+        <h1>Gestão de Colaboradores</h1>
+        <p class="subtitulo">Entre para administrar unidades, colaboradores e usuários.</p>
+      </div>
 
-      <label>Login
-        <input formControlName="login" autocomplete="username" />
-      </label>
+      <cds-label>
+        Login
+        <input cdsText formControlName="login" autocomplete="username" />
+      </cds-label>
 
-      <label>Senha
-        <input type="password" formControlName="senha" autocomplete="current-password" />
-      </label>
+      <cds-label>
+        Senha
+        <input cdsText type="password" formControlName="senha" autocomplete="current-password" />
+      </cds-label>
 
       @if (erro()) {
-        <p class="erro">{{ erro() }}</p>
+        <p class="erro" role="alert">{{ erro() }}</p>
       }
 
-      <button type="submit" [disabled]="form.invalid || carregando()">
+      <button cdsButton="primary" type="submit" [disabled]="form.invalid || carregando()">
         {{ carregando() ? 'Entrando…' : 'Entrar' }}
       </button>
     </form>
   `,
   styles: `
-    .cartao { max-width: 340px; margin: 10vh auto; background: #fff; padding: 2rem; border-radius: .5rem; display: grid; gap: 1rem; }
-    label { display: grid; gap: .25rem; font-size: .9rem; }
-    input { padding: .5rem; border: 1px solid #ccd2d9; border-radius: .25rem; }
-    .erro { color: #a12020; margin: 0; font-size: .9rem; }
+    .cartao {
+      max-width: 24rem;
+      margin: 10vh auto;
+      background: var(--cds-layer, #fff);
+      padding: 2rem;
+      display: grid;
+      gap: 1.5rem;
+    }
+    h1 { margin: 0 0 .5rem; font-size: 1.5rem; font-weight: 400; }
+    .subtitulo { margin: 0; font-size: .875rem; color: var(--cds-text-secondary, #525252); }
+    .erro { margin: 0; font-size: .875rem; color: var(--cds-text-error, #da1e28); }
+    button { width: 100%; }
   `
 })
 export class LoginComponent {
@@ -55,10 +69,16 @@ export class LoginComponent {
     this.erro.set(null);
 
     const { login, senha } = this.form.getRawValue();
+
     this.auth.login(login, senha).subscribe({
       next: () => this.router.navigate(['/']),
       error: err => {
-        this.erro.set(err.error?.detail ?? 'Login ou senha inválidos.');
+        // O interceptor não notifica erros de login: a mensagem aparece no próprio formulário.
+        this.erro.set(
+          err.status === 429
+            ? 'Muitas tentativas seguidas. Aguarde um minuto e tente de novo.'
+            : (err.error?.detail ?? 'Login ou senha inválidos.')
+        );
         this.carregando.set(false);
       }
     });

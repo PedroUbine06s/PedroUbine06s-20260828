@@ -1,36 +1,70 @@
-import { Component, inject } from '@angular/core';
-import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { Component, computed, inject } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
+import { filter, map } from 'rxjs';
+import { UIShellModule } from 'carbon-components-angular/ui-shell';
 import { AuthService } from './core/services/auth.service';
 import { NotificacoesComponent } from './shared/notificacoes.component';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, NotificacoesComponent],
+  imports: [RouterOutlet, UIShellModule, NotificacoesComponent],
   template: `
     @if (auth.estaLogado()) {
-      <nav class="topo">
-        <strong>Gestão de Colaboradores</strong>
-        <a routerLink="/colaboradores" routerLinkActive="ativo">Colaboradores</a>
-        <a routerLink="/unidades" routerLinkActive="ativo">Unidades</a>
-        <a routerLink="/usuarios" routerLinkActive="ativo">Usuários</a>
-        <button (click)="sair()">Sair</button>
-      </nav>
+      <cds-header name="Gestão de Colaboradores" [route]="['/colaboradores']" [useRouter]="true">
+        <cds-header-navigation>
+          @for (item of navegacao; track item.rota) {
+            <cds-header-item
+              [route]="[item.rota]"
+              [useRouter]="true"
+              [isCurrentPage]="rotaAtiva() === item.rota">
+              {{ item.rotulo }}
+            </cds-header-item>
+          }
+        </cds-header-navigation>
+
+        <cds-header-global>
+          <button class="cds--header__action" type="button" (click)="sair()">Sair</button>
+        </cds-header-global>
+      </cds-header>
     }
+
     <app-notificacoes />
-    <main class="conteudo">
+
+    <main class="conteudo" [class.com-cabecalho]="auth.estaLogado()">
       <router-outlet />
     </main>
   `,
   styles: `
-    .topo { display: flex; gap: 1rem; align-items: center; padding: .75rem 1.5rem; background: #fff; border-bottom: 1px solid #e3e6ea; }
-    .topo a { text-decoration: none; } .topo a.ativo { font-weight: 600; }
-    .topo button { margin-left: auto; }
-    .conteudo { padding: 1.5rem; max-width: 960px; margin: 0 auto; }
+    .conteudo { padding: 1.5rem; max-width: 72rem; margin: 0 auto; }
+    .conteudo.com-cabecalho { margin-top: 3rem; }
+    .cds--header__action { width: auto; padding: 0 1rem; }
   `
 })
 export class AppComponent {
   readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+
+  readonly navegacao = [
+    { rota: '/colaboradores', rotulo: 'Colaboradores' },
+    { rota: '/unidades', rotulo: 'Unidades' },
+    { rota: '/usuarios', rotulo: 'Usuários' }
+  ];
+
+  private readonly url = toSignal(
+    this.router.events.pipe(
+      filter(evento => evento instanceof NavigationEnd),
+      map(() => this.router.url)
+    ),
+    { initialValue: this.router.url }
+  );
+
+  /** Rota base atual, para marcar o item de navegação correspondente. */
+  readonly rotaAtiva = computed(() => {
+    const url = this.url();
+
+    return this.navegacao.find(item => url.startsWith(item.rota))?.rota ?? '';
+  });
 
   sair(): void {
     this.auth.logout();

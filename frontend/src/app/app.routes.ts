@@ -11,7 +11,8 @@ export const routes: Routes = [
       { path: 'usuarios', loadComponent: () => import('./features/usuarios/usuarios-lista.component').then(m => m.UsuariosListaComponent) },
       { path: 'colaboradores', loadComponent: () => import('./features/colaboradores/colaboradores-lista.component').then(m => m.ColaboradoresListaComponent) },
       { path: 'unidades', loadComponent: () => import('./features/unidades/unidades-lista.component').then(m => m.UnidadesListaComponent) }
-      // TODO: rotas de formulário (novo/editar) por feature
+      // Criação e edição acontecem em modal dentro de cada listagem, então não
+      // há rota própria de formulário.
     ]
   },
   { path: '**', redirectTo: '' }
