@@ -50,6 +50,11 @@ public class ColaboradorService(
         if (usuario is null)
             return Result<ColaboradorRespostaDto>.Falha("Usuário não encontrado.", TipoErro.NaoEncontrado);
 
+        // Cada usuário pertence a um único colaborador (ver "Decisões de domínio" no README).
+        if (await colaboradorRepo.ExisteParaUsuarioAsync(dto.UsuarioId, ct))
+            return Result<ColaboradorRespostaDto>.Falha(
+                "Este usuário já está vinculado a outro colaborador.", TipoErro.Conflito);
+
         var codigo = await gerador.GerarAsync(TipoCodigo.Colaborador, ct);
         var colaborador = Colaborador.Criar(codigo, dto.Nome, unidade, usuario);
 

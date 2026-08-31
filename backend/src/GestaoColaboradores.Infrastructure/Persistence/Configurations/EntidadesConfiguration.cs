@@ -5,8 +5,9 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace GestaoColaboradores.Infrastructure.Persistence.Configurations;
 
-// Unicidade de código garantida NO BANCO (unique index), não só na aplicação.
-// A violação vira 409 Conflict via checagem prévia no service + tratamento no middleware.
+// Unicidade garantida NO BANCO (unique index), não só na aplicação.
+// Uma violação vira 409 por dois caminhos: a checagem prévia no service, que dá a mensagem
+// específica, e o UnitOfWork, que traduz o erro do PostgreSQL para quem escapar dela.
 //
 // Os limites de tamanho vêm das constantes do domínio: schema e validação leem da mesma
 // fonte, então é impossível o domínio aceitar um valor que a coluna rejeitaria.
@@ -42,6 +43,8 @@ public class ColaboradorConfiguration : IEntityTypeConfiguration<Colaborador>
             .HasForeignKey(c => c.UnidadeId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        // WithOne (e não WithMany): um usuário pertence a um único colaborador. Isso cria um
+        // índice único em UsuarioId — decisão registrada em "Decisões de domínio" no README.
         builder.HasOne(c => c.Usuario)
             .WithOne()
             .HasForeignKey<Colaborador>(c => c.UsuarioId)

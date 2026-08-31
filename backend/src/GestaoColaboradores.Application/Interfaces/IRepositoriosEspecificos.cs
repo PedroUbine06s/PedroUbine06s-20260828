@@ -19,6 +19,13 @@ public interface IColaboradorRepository : IRepository<Colaborador>
     /// tocar na unidade: sem o Include, montar o DTO de resposta acessaria uma referência nula.
     /// </summary>
     Task<Colaborador?> ObterComUnidadeAsync(Guid id, CancellationToken ct = default);
+
+    /// <summary>
+    /// O vínculo com usuário é 1:1 — o banco tem índice único em UsuarioId. Sem esta
+    /// checagem, um usuário já vinculado só falharia no SaveChanges, virando 409 genérico
+    /// em vez de uma mensagem que diz qual é o problema.
+    /// </summary>
+    Task<bool> ExisteParaUsuarioAsync(Guid usuarioId, CancellationToken ct = default);
 }
 
 public interface IUnidadeRepository : IRepository<Unidade>

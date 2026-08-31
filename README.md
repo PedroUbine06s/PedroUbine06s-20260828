@@ -2,7 +2,9 @@
 
 <!-- TODO: uma frase de apresentação + GIF de ~20s navegando no portal -->
 
-Gestão de usuários, colaboradores e unidades com API ASP.NET Core (MVC), portal Angular e PostgreSQL.
+Gestão de usuários, colaboradores e unidades. **A API está completa**; o portal Angular está
+em andamento — hoje ele tem autenticação, rotas protegidas e a listagem de colaboradores, e as
+telas de usuários e unidades ainda são esqueletos.
 
 ## Como rodar
 
@@ -11,7 +13,7 @@ docker compose up
 ```
 
 - **API + Swagger:** http://localhost:5000/swagger
-- **Portal:** `cd frontend && npm install && npm start` → http://localhost:4200
+- **Portal (parcial):** `cd frontend && npm install && npm start` → http://localhost:4200
 - **Login de avaliação:** `admin` / `admin123`
 
 O startup aplica as migrations e semeia o banco automaticamente. Os dados iniciais foram
@@ -38,8 +40,11 @@ flowchart LR
     E --> F[(PostgreSQL\nDocker)]
 ```
 
-Quatro camadas em uma única solution — deliberadamente **não** é Clean Architecture com
-N projetos: para um domínio de 3 entidades, isso seria complexidade sem retorno.
+Quatro projetos, um por camada. A dependência aponta sempre para dentro: `Api` conhece
+`Application`, que conhece `Domain`; `Infrastructure` implementa as interfaces declaradas em
+`Application`. O que ficou de fora, deliberadamente, foi a subdivisão que Clean Architecture
+costuma trazer junto — projetos separados para casos de uso, contratos e adaptadores. Para um
+domínio de 3 entidades isso multiplicaria arquivos sem mudar nada de fato.
 
 ## Patterns aplicados
 
@@ -61,14 +66,20 @@ concorrência entre requisições simultâneas é resolvida pelo índice único,
 ## Decisões de domínio
 
 - **Unidade inativa não recebe colaborador** — regra expressa no domínio
-  (`Unidade.PodeReceberColaborador` + guarda em `Colaborador.Criar`), retornando **422**
-  na API e refletida no portal (o select de unidades só lista ativas).
+  (`Unidade.PodeReceberColaborador` + guarda em `Colaborador.Criar`), verificada também no
+  serviço e retornando **422** na API.
 - **Update de usuário limitado a senha e status por contrato**: o DTO de atualização só
   possui esses dois campos — a API impede o erro em vez de validá-lo depois.
 - **Remoção de colaborador inativa o usuário vinculado** — das três saídas possíveis, apagar
   o usuário destruiria o histórico de quem fez o quê, e deixá-lo ativo manteria uma
   credencial válida sem dono. Inativar encerra o acesso preservando o rastro. As duas
   alterações acontecem no mesmo commit, então ou ambas valem ou nenhuma vale.
+- **Um usuário pertence a um único colaborador (1:1)** — o enunciado exige que todo
+  colaborador tenha um usuário, mas é silencioso sobre a recíproca. Escolhi 1:1 para que
+  credencial e pessoa sejam a mesma identidade: com 1:N, dois colaboradores compartilhariam
+  um login e o registro de quem fez o quê deixaria de identificar alguém. O custo é não
+  suportar a mesma pessoa ocupando dois cargos, cenário que o enunciado não pede. A regra é
+  garantida por índice único e checada antes de inserir, devolvendo **409**.
 - **Senhas:** BCrypt; hash jamais exposto em resposta.
 - **Identificador é UUID v7, gerado no domínio** — a versão 7 é ordenada no tempo, então
   preserva a localidade do índice que um UUID v4 destruiria com inserções espalhadas. Gerar
@@ -152,9 +163,10 @@ em contêiner e exercitam HTTP de ponta a ponta — pipeline de autenticação, 
 e seed inclusos. Não se usa InMemory provider aqui de propósito: ele não tem índice único, e é
 justamente o índice que garante a unicidade de código e login.
 
-Alguns que valem destaque: o login devolve mensagem **indistinguível** entre usuário inexistente
-e senha errada (contra enumeração de usuários); a resposta de usuários **nunca** contém a palavra
-"senha" nem "hash"; inativar unidade não desvincula quem já estava; remover colaborador inativa o
+Alguns que valem destaque: o login devolve mensagem indistinguível entre usuário inexistente e
+senha errada, e roda o BCrypt mesmo quando o login não existe — mensagem igual não bastaria,
+porque a diferença de tempo entregaria o que o texto esconde; a resposta de usuários **nunca**
+contém a palavra "senha" nem "hash"; inativar unidade não desvincula quem já estava; remover colaborador inativa o
 usuário na mesma transação; o `PUT` recusa corpo incompleto enquanto o `PATCH` aceita; e duas criações seguidas nunca
 recebem o mesmo código, o que cobra o comportamento da sequence.
 

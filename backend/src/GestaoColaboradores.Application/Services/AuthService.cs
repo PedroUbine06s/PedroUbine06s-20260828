@@ -17,20 +17,34 @@ public class AuthService(
     IPasswordHasher hasher,
     ITokenService tokenService) : IAuthService
 {
+    /// <summary>
+    /// Hash descartável, no formato do BCrypt, usado quando o login não existe. Verificar
+    /// contra ele custa o mesmo que verificar contra um hash real — é o que impede o TEMPO de
+    /// resposta de revelar o que a mensagem esconde. Sem isto, "login inexistente" voltaria em
+    /// cerca de 1 ms e "senha errada" em cerca de 100 ms, e a diferença sozinha entregaria
+    /// quais logins existem.
+    /// </summary>
+    private const string HashDescartavel =
+        "$2a$11$0000000000000000000000000000000000000000000000000000u.";
+
     public async Task<Result<TokenRespostaDto>> LoginAsync(LoginDto dto, CancellationToken ct = default)
     {
         const string credenciaisInvalidas = "Login ou senha inválidos.";
 
         var usuario = await usuarioRepo.ObterPorLoginAsync(dto.Login, ct);
 
-        if (usuario is null)
+        // A verificação roda SEMPRE, exista o usuário ou não, para que os dois caminhos
+        // gastem o mesmo tempo.
+        var senhaConfere = hasher.Verificar(dto.Senha, usuario?.SenhaHash ?? HashDescartavel);
+
+        if (usuario is null || !senhaConfere)
             return Result<TokenRespostaDto>.Falha(credenciaisInvalidas, TipoErro.NaoAutorizado);
 
-        if (!hasher.Verificar(dto.Senha, usuario.SenhaHash))
-            return Result<TokenRespostaDto>.Falha(credenciaisInvalidas, TipoErro.NaoAutorizado);
-
+        // Mensagem específica aqui é aceitável: quem chegou até este ponto já provou conhecer
+        // a senha, então nada é revelado a quem não deveria saber.
         if (!usuario.Ativo)
-            return Result<TokenRespostaDto>.Falha("Usuário inativo.", TipoErro.NaoAutorizado);
+            return Result<TokenRespostaDto>.Falha(
+                "Usuário inativo. Procure um administrador.", TipoErro.NaoAutorizado);
 
         var token = tokenService.GerarToken(usuario);
 

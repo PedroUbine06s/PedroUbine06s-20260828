@@ -26,6 +26,9 @@ public class ColaboradorRepository(AppDbContext context) : Repository<Colaborado
     // Sem AsNoTracking, ao contrário da listagem: quem busca por id vai alterar.
     public Task<Colaborador?> ObterComUnidadeAsync(Guid id, CancellationToken ct = default) =>
         Set.Include(c => c.Unidade).FirstOrDefaultAsync(c => c.Id == id, ct);
+
+    public Task<bool> ExisteParaUsuarioAsync(Guid usuarioId, CancellationToken ct = default) =>
+        Set.AnyAsync(c => c.UsuarioId == usuarioId, ct);
 }
 
 public class UnidadeRepository(AppDbContext context) : Repository<Unidade>(context), IUnidadeRepository

@@ -92,6 +92,20 @@ public class AuthServiceTests
         Assert.DoesNotContain("inativo", resultado.Erro!, StringComparison.OrdinalIgnoreCase);
     }
 
+    /// <summary>
+    /// Mensagem igual não basta contra enumeração: se o BCrypt só rodasse quando o usuário
+    /// existe, o tempo de resposta entregaria a informação que a mensagem esconde.
+    /// </summary>
+    [Fact]
+    public async Task Login_ComLoginInexistente_AindaAssimVerificaASenha()
+    {
+        _usuarioRepo.ObterPorLoginAsync("fantasma", Arg.Any<CancellationToken>()).Returns((Usuario?)null);
+
+        await CriarService().LoginAsync(new LoginDto("fantasma", "qualquer"));
+
+        _hasher.Received(1).Verificar("qualquer", Arg.Any<string>());
+    }
+
     [Fact]
     public async Task Login_QuandoFalha_NaoGeraToken()
     {

@@ -302,4 +302,45 @@ public class FluxosTests(ApiFactory factory) : IClassFixture<ApiFactory>
         var colaboradorDepois = await client.GetAsync($"/api/v1/colaboradores/{colaborador.Id}");
         Assert.Equal(HttpStatusCode.NotFound, colaboradorDepois.StatusCode);
     }
+
+    /// <summary>
+    /// O vínculo colaborador-usuário é 1:1. Sem esta checagem, o índice único do banco
+    /// estouraria no SaveChanges e o cliente receberia 500 em vez de 409.
+    /// </summary>
+    [Fact]
+    public async Task CriarColaborador_ComUsuarioJaVinculado_Responde409()
+    {
+        var client = await factory.CriarClienteAutenticadoAsync();
+        var unidade = await UnidadeDoSeedAsync(client, ativa: true);
+        var usuario = await CriarUsuarioAsync(client, "usuario.reutilizado");
+
+        var primeiro = await client.PostAsJsonAsync("/api/v1/colaboradores",
+            new CriarColaboradorDto("Primeiro", unidade.Id, usuario.Id));
+        Assert.Equal(HttpStatusCode.Created, primeiro.StatusCode);
+
+        var segundo = await client.PostAsJsonAsync("/api/v1/colaboradores",
+            new CriarColaboradorDto("Segundo", unidade.Id, usuario.Id));
+
+        Assert.Equal(HttpStatusCode.Conflict, segundo.StatusCode);
+    }
+
+    /// <summary>
+    /// Rede de segurança: mesmo que uma checagem prévia falhe ou perca a corrida, uma
+    /// violação de índice único precisa virar 409 — nunca 500.
+    /// </summary>
+    [Fact]
+    public async Task ViolacaoDeIndiceUnico_NuncaVira500()
+    {
+        var client = await factory.CriarClienteAutenticadoAsync();
+        var unidade = await UnidadeDoSeedAsync(client, ativa: true);
+        var usuario = await CriarUsuarioAsync(client, "corrida.simulada");
+
+        await client.PostAsJsonAsync("/api/v1/colaboradores",
+            new CriarColaboradorDto("Primeiro", unidade.Id, usuario.Id));
+
+        var segundo = await client.PostAsJsonAsync("/api/v1/colaboradores",
+            new CriarColaboradorDto("Segundo", unidade.Id, usuario.Id));
+
+        Assert.NotEqual(HttpStatusCode.InternalServerError, segundo.StatusCode);
+    }
 }
