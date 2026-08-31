@@ -5,6 +5,14 @@
 Gestão de usuários, colaboradores e unidades: uma API ASP.NET Core com portal Angular,
 cobrindo o CRUD das três entidades e a regra de que unidade inativa não recebe colaborador.
 
+> [!NOTE]
+> **O `.env` da raiz é versionado de propósito.** São valores de desenvolvimento de um banco
+> em contêiner, recriado a cada `docker compose up`: não protegem dado algum. Versionar é o
+> que permite clonar e rodar sem passo de configuração, e faz cada valor ser declarado uma
+> vez só — antes a senha aparecia duas vezes, no serviço do banco e embutida na connection
+> string da API, e mudar uma sem a outra quebraria a conexão em silêncio. Em produção,
+> variáveis de ambiente com os mesmos nomes têm precedência e o `docker-compose.yml` não muda.
+
 ## Como rodar
 
 ```bash
@@ -20,16 +28,9 @@ Um comando sobe o sistema inteiro — banco, API e portal:
 O portal é servido por nginx a partir do build de produção, e não pelo `ng serve`. Não é
 preciso ter Node na máquina para avaliar o projeto.
 
-Os valores de configuração ficam no `.env` da raiz, que o compose carrega sozinho — por isso
-não há passo de configuração antes de subir. Ele **é versionado de propósito**: são valores
-de desenvolvimento de um banco em contêiner, recriado a cada `docker compose up`, que não
-protegem dado algum. O ganho é que cada valor passa a ser declarado uma única vez; antes a
-senha aparecia duas vezes, no serviço do banco e embutida na connection string da API, e
-mudar uma sem a outra quebraria a conexão em silêncio.
-
-Variável de ambiente tem precedência sobre o arquivo, então
-`POSTGRES_PASSWORD=outra docker compose up` já roda com outro valor, e em produção o
-orquestrador injeta os mesmos nomes sem que o `docker-compose.yml` mude.
+Os valores de configuração vêm do `.env` da raiz (ver a nota no início), que o compose
+carrega sozinho — por isso não há passo de configuração antes de subir. Para rodar com
+outro valor, basta a variável de ambiente: `POSTGRES_PASSWORD=outra docker compose up`.
 
 O startup aplica as migrations e semeia o banco automaticamente. Os dados iniciais foram
 escolhidos para que cada requisito seja testável sem preparo:
