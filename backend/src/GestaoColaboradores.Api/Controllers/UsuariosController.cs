@@ -16,14 +16,13 @@ public class UsuariosController(IUsuarioService service) : ApiControllerBase
     [HttpPost]
     public async Task<ActionResult> Criar(CriarUsuarioDto dto, CancellationToken ct)
     {
-        // TODO: seguir o padrão de ColaboradoresController (201 + Location)
-        throw new NotImplementedException();
+        var resultado = await service.CriarAsync(dto, ct);
+        return Criado(resultado, nameof(Listar), new { });
     }
 
     [HttpPut("{id:int}")]
     public async Task<ActionResult> Atualizar(int id, AtualizarUsuarioDto dto, CancellationToken ct)
     {
-        // TODO — lembre: o DTO já restringe a senha e status por contrato
-        throw new NotImplementedException();
+        return DeResultado(await service.AtualizarAsync(id, dto, ct));
     }
 }

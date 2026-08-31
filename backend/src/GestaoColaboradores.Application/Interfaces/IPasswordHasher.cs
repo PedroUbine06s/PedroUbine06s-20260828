@@ -7,7 +7,9 @@ public interface IPasswordHasher
     bool Verificar(string senha, string hash);
 }
 
+public record TokenGerado(string Token, DateTime ExpiraEm);
+
 public interface ITokenService
 {
-    string GerarToken(Domain.Entidades.Usuario usuario);
+    TokenGerado GerarToken(Domain.Entidades.Usuario usuario);
 }

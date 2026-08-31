@@ -12,8 +12,10 @@ public class TokenService(IOptions<JwtSettings> options) : ITokenService
 {
     private readonly JwtSettings _settings = options.Value;
 
-    public string GerarToken(Usuario usuario)
-    {
+    public TokenGerado GerarToken(Usuario usuario)
+    {   
+        var expiraEm = DateTime.UtcNow.AddMinutes(_settings.ExpiracaoMinutos);
+
         var claims = new[]
         {
             new Claim(JwtRegisteredClaimNames.Sub, usuario.Id.ToString()),
@@ -28,9 +30,9 @@ public class TokenService(IOptions<JwtSettings> options) : ITokenService
             issuer: _settings.Emissor,
             audience: _settings.Emissor,
             claims: claims,
-            expires: DateTime.UtcNow.AddMinutes(_settings.ExpiracaoMinutos),
+            expires: expiraEm,
             signingCredentials: credenciais);
 
-        return new JwtSecurityTokenHandler().WriteToken(token);
+        return new TokenGerado(new JwtSecurityTokenHandler().WriteToken(token), expiraEm);
     }
 }
