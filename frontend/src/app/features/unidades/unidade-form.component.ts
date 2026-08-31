@@ -28,16 +28,15 @@ import { UnidadesService } from './unidades.service';
           <cds-label
             [invalid]="nomeInvalido()"
             invalidText="Informe o nome da unidade."
-            [helperText]="unidade() ? '' : 'O código é gerado pelo sistema (UNI000001).'">
+            [helperText]="unidade() ? '' : 'O código é gerado pelo sistema (UNI000001).'"
+          >
             Nome
             <input cdsText formControlName="nome" autocomplete="off" />
           </cds-label>
 
           @if (unidade()) {
             <cds-checkbox formControlName="ativo">Ativa</cds-checkbox>
-            <p class="aviso">
-              Uma unidade inativa deixa de aceitar novos colaboradores.
-            </p>
+            <p class="aviso">Uma unidade inativa deixa de aceitar novos colaboradores.</p>
           }
         </form>
       </section>
@@ -51,8 +50,15 @@ import { UnidadesService } from './unidades.service';
     </cds-modal>
   `,
   styles: `
-    .campos { display: grid; gap: 1.5rem; }
-    .aviso { margin: 0; font-size: .75rem; color: var(--cds-text-secondary, #525252); }
+    .campos {
+      display: grid;
+      gap: 1.5rem;
+    }
+    .aviso {
+      margin: 0;
+      font-size: 0.75rem;
+      color: var(--cds-text-secondary, #525252);
+    }
   `
 })
 export class UnidadeFormComponent {

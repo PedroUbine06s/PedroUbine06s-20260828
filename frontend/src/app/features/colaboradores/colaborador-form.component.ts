@@ -49,7 +49,8 @@ const TAMANHO_MAXIMO = 100;
           <cds-label
             [invalid]="nomeInvalido()"
             invalidText="Informe o nome do colaborador."
-            [helperText]="colaborador() ? '' : 'O código é gerado pelo sistema (COL000001).'">
+            [helperText]="colaborador() ? '' : 'O código é gerado pelo sistema (COL000001).'"
+          >
             Nome
             <input cdsText formControlName="nome" autocomplete="off" />
           </cds-label>
@@ -61,12 +62,11 @@ const TAMANHO_MAXIMO = 100;
               semUnidadeAtiva()
                 ? 'Nenhuma unidade ativa. Ative uma unidade antes de cadastrar colaboradores.'
                 : ''
-            ">
+            "
+          >
             <option value="">Selecione uma unidade</option>
             @for (u of unidadesSelecionaveis(); track u.id) {
-              <option [value]="u.id">
-                {{ u.nome }}{{ u.ativo ? '' : ' (inativa)' }}
-              </option>
+              <option [value]="u.id">{{ u.nome }}{{ u.ativo ? '' : ' (inativa)' }}</option>
             }
           </cds-select>
 
@@ -74,7 +74,8 @@ const TAMANHO_MAXIMO = 100;
             <cds-select
               formControlName="usuarioId"
               label="Usuário"
-              helperText="Cada usuário pertence a um único colaborador.">
+              helperText="Cada usuário pertence a um único colaborador."
+            >
               <option value="">Selecione um usuário</option>
               @for (u of usuarios(); track u.id) {
                 <option [value]="u.id">{{ u.login }} ({{ u.codigo }})</option>
@@ -93,7 +94,10 @@ const TAMANHO_MAXIMO = 100;
     </cds-modal>
   `,
   styles: `
-    .campos { display: grid; gap: 1.5rem; }
+    .campos {
+      display: grid;
+      gap: 1.5rem;
+    }
   `
 })
 export class ColaboradorFormComponent {
@@ -158,7 +162,6 @@ export class ColaboradorFormComponent {
       usuario.setValidators(atual ? [] : [Validators.required]);
       usuario.updateValueAndValidity();
     });
-
 
     this.carregarOpcoes();
   }

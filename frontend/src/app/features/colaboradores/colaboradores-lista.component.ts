@@ -42,7 +42,9 @@ import { ColaboradoresService } from './colaboradores.service';
             <tr>
               <td>{{ c.codigo }}</td>
               <td>{{ c.nome }}</td>
-              <td>{{ c.nomeUnidade }} <span class="codigo">{{ c.codigoUnidade }}</span></td>
+              <td>
+                {{ c.nomeUnidade }} <span class="codigo">{{ c.codigoUnidade }}</span>
+              </td>
               <td class="acoes">
                 <button cdsButton="ghost" size="sm" (click)="abrirEdicao(c)">Editar</button>
                 <button cdsButton="danger--ghost" size="sm" (click)="pedirRemocao(c)">
@@ -59,7 +61,8 @@ import { ColaboradoresService } from './colaboradores.service';
         [tamanho]="dados()!.tamanho"
         [total]="dados()!.total"
         [totalDePaginas]="dados()!.totalDePaginas"
-        (mudarPagina)="irParaPagina($event)" />
+        (mudarPagina)="irParaPagina($event)"
+      />
     }
 
     @if (formAberto()) {
@@ -67,25 +70,46 @@ import { ColaboradoresService } from './colaboradores.service';
         [aberto]="formAberto()"
         [colaborador]="emEdicao()"
         (salvo)="aoSalvar()"
-        (cancelado)="fecharForm()" />
+        (cancelado)="fecharForm()"
+      />
     }
 
     @if (emRemocao(); as alvo) {
       <app-confirmacao
         [aberto]="true"
-        [mensagem]="'Remover ' + alvo.nome + ' (' + alvo.codigo + ')? Esta ação não pode ser desfeita.'"
+        [mensagem]="
+          'Remover ' + alvo.nome + ' (' + alvo.codigo + ')? Esta ação não pode ser desfeita.'
+        "
         [processando]="removendo()"
         (confirmar)="confirmarRemocao()"
-        (cancelar)="emRemocao.set(null)" />
+        (cancelar)="emRemocao.set(null)"
+      />
     }
   `,
   styles: `
-    .cabecalho { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
-    .cabecalho h1 { margin: 0; }
-    .vazio { color: var(--cds-text-secondary, #525252); }
-    .acoes { display: flex; gap: .25rem; }
-    .codigo { color: var(--cds-text-secondary, #525252); font-size: .75rem; }
-    table { width: 100%; }
+    .cabecalho {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+    }
+    .cabecalho h1 {
+      margin: 0;
+    }
+    .vazio {
+      color: var(--cds-text-secondary, #525252);
+    }
+    .acoes {
+      display: flex;
+      gap: 0.25rem;
+    }
+    .codigo {
+      color: var(--cds-text-secondary, #525252);
+      font-size: 0.75rem;
+    }
+    table {
+      width: 100%;
+    }
   `
 })
 export class ColaboradoresListaComponent {

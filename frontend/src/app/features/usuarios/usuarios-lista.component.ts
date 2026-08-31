@@ -29,7 +29,8 @@ type Filtro = 'todos' | 'ativos' | 'inativos';
         <button
           cdsButton="ghost"
           [class.selecionado]="filtro() === opcao.valor"
-          (click)="mudarFiltro(opcao.valor)">
+          (click)="mudarFiltro(opcao.valor)"
+        >
           {{ opcao.rotulo }}
         </button>
       }
@@ -68,7 +69,8 @@ type Filtro = 'todos' | 'ativos' | 'inativos';
         [tamanho]="dados()!.tamanho"
         [total]="dados()!.total"
         [totalDePaginas]="dados()!.totalDePaginas"
-        (mudarPagina)="irParaPagina($event)" />
+        (mudarPagina)="irParaPagina($event)"
+      />
     }
 
     @if (formAberto()) {
@@ -76,16 +78,34 @@ type Filtro = 'todos' | 'ativos' | 'inativos';
         [aberto]="formAberto()"
         [usuario]="emEdicao()"
         (salvo)="aoSalvar()"
-        (cancelado)="fecharForm()" />
+        (cancelado)="fecharForm()"
+      />
     }
   `,
   styles: `
-    .cabecalho { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
-    .cabecalho h1 { margin: 0; }
-    .filtros { display: flex; gap: .25rem; margin-bottom: 1rem; }
-    .filtros .selecionado { background: var(--cds-background-selected, #e0e0e0); }
-    .vazio { color: var(--cds-text-secondary, #525252); }
-    table { width: 100%; }
+    .cabecalho {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+    }
+    .cabecalho h1 {
+      margin: 0;
+    }
+    .filtros {
+      display: flex;
+      gap: 0.25rem;
+      margin-bottom: 1rem;
+    }
+    .filtros .selecionado {
+      background: var(--cds-background-selected, #e0e0e0);
+    }
+    .vazio {
+      color: var(--cds-text-secondary, #525252);
+    }
+    table {
+      width: 100%;
+    }
   `
 })
 export class UsuariosListaComponent {

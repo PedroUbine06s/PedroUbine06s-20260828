@@ -28,8 +28,7 @@ const MINIMO_SENHA = 8;
 
       <section cdsModalContent>
         <form [formGroup]="form" class="campos">
-          <cds-label
-            [helperText]="usuario() ? 'O login não é alterável por contrato da API.' : ''">
+          <cds-label [helperText]="usuario() ? 'O login não é alterável por contrato da API.' : ''">
             Login
             <input cdsText formControlName="login" autocomplete="off" />
           </cds-label>
@@ -37,7 +36,8 @@ const MINIMO_SENHA = 8;
           <cds-label
             [invalid]="senhaInvalida()"
             [invalidText]="'A senha precisa de pelo menos ' + minimoSenha + ' caracteres.'"
-            [helperText]="usuario() ? 'Deixe em branco para manter a senha atual.' : ''">
+            [helperText]="usuario() ? 'Deixe em branco para manter a senha atual.' : ''"
+          >
             Senha
             <input cdsText type="password" formControlName="senha" autocomplete="new-password" />
           </cds-label>
@@ -55,7 +55,10 @@ const MINIMO_SENHA = 8;
     </cds-modal>
   `,
   styles: `
-    .campos { display: grid; gap: 1.5rem; }
+    .campos {
+      display: grid;
+      gap: 1.5rem;
+    }
   `
 })
 export class UsuarioFormComponent {

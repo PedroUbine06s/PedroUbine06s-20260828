@@ -17,7 +17,8 @@ import { NotificacaoService } from '../core/services/notificacao.service';
             caption: '',
             showClose: true
           }"
-          (close)="servico.remover(n.id)" />
+          (close)="servico.remover(n.id)"
+        />
       }
     </div>
   `,
@@ -29,7 +30,7 @@ import { NotificacaoService } from '../core/services/notificacao.service';
       z-index: 9000;
       display: flex;
       flex-direction: column;
-      gap: .5rem;
+      gap: 0.5rem;
     }
   `
 })

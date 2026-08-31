@@ -50,7 +50,8 @@ import { UnidadesService } from './unidades.service';
                   [attr.aria-label]="
                     (expandida() === u.id ? 'Recolher' : 'Expandir') + ' colaboradores de ' + u.nome
                   "
-                  (click)="alternarExpansao(u.id)">
+                  (click)="alternarExpansao(u.id)"
+                >
                   {{ expandida() === u.id ? '▾' : '▸' }}
                 </button>
               </td>
@@ -64,7 +65,8 @@ import { UnidadesService } from './unidades.service';
                   cdsButton="ghost"
                   size="sm"
                   [disabled]="alternandoStatus() === u.id"
-                  (click)="alternarStatus(u)">
+                  (click)="alternarStatus(u)"
+                >
                   {{ u.ativo ? 'Inativar' : 'Ativar' }}
                 </button>
               </td>
@@ -78,7 +80,9 @@ import { UnidadesService } from './unidades.service';
                   } @else {
                     <ul class="colaboradores">
                       @for (c of u.colaboradores; track c.id) {
-                        <li><strong>{{ c.codigo }}</strong> — {{ c.nome }}</li>
+                        <li>
+                          <strong>{{ c.codigo }}</strong> — {{ c.nome }}
+                        </li>
                       }
                     </ul>
                   }
@@ -94,7 +98,8 @@ import { UnidadesService } from './unidades.service';
         [tamanho]="dados()!.tamanho"
         [total]="dados()!.total"
         [totalDePaginas]="dados()!.totalDePaginas"
-        (mudarPagina)="irParaPagina($event)" />
+        (mudarPagina)="irParaPagina($event)"
+      />
     }
 
     @if (formAberto()) {
@@ -102,18 +107,43 @@ import { UnidadesService } from './unidades.service';
         [aberto]="formAberto()"
         [unidade]="emEdicao()"
         (salvo)="aoSalvar()"
-        (cancelado)="fecharForm()" />
+        (cancelado)="fecharForm()"
+      />
     }
   `,
   styles: `
-    .cabecalho { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
-    .cabecalho h1 { margin: 0; }
-    .vazio { color: var(--cds-text-secondary, #525252); margin: 0; }
-    .acoes { display: flex; gap: .25rem; }
-    .coluna-expandir { width: 2.5rem; }
-    .linha-detalhe td { background: var(--cds-layer-accent, #e0e0e0); }
-    .colaboradores { margin: 0; padding-left: 1.25rem; display: grid; gap: .25rem; }
-    table { width: 100%; }
+    .cabecalho {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+    }
+    .cabecalho h1 {
+      margin: 0;
+    }
+    .vazio {
+      color: var(--cds-text-secondary, #525252);
+      margin: 0;
+    }
+    .acoes {
+      display: flex;
+      gap: 0.25rem;
+    }
+    .coluna-expandir {
+      width: 2.5rem;
+    }
+    .linha-detalhe td {
+      background: var(--cds-layer-accent, #e0e0e0);
+    }
+    .colaboradores {
+      margin: 0;
+      padding-left: 1.25rem;
+      display: grid;
+      gap: 0.25rem;
+    }
+    table {
+      width: 100%;
+    }
   `
 })
 export class UnidadesListaComponent {

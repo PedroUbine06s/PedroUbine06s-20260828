@@ -43,10 +43,24 @@ import { AuthService } from '../../core/services/auth.service';
       display: grid;
       gap: 1.5rem;
     }
-    h1 { margin: 0 0 .5rem; font-size: 1.5rem; font-weight: 400; }
-    .subtitulo { margin: 0; font-size: .875rem; color: var(--cds-text-secondary, #525252); }
-    .erro { margin: 0; font-size: .875rem; color: var(--cds-text-error, #da1e28); }
-    button { width: 100%; }
+    h1 {
+      margin: 0 0 0.5rem;
+      font-size: 1.5rem;
+      font-weight: 400;
+    }
+    .subtitulo {
+      margin: 0;
+      font-size: 0.875rem;
+      color: var(--cds-text-secondary, #525252);
+    }
+    .erro {
+      margin: 0;
+      font-size: 0.875rem;
+      color: var(--cds-text-error, #da1e28);
+    }
+    button {
+      width: 100%;
+    }
   `
 })
 export class LoginComponent {
