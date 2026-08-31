@@ -2,9 +2,8 @@
 
 <!-- TODO: uma frase de apresentação + GIF de ~20s navegando no portal -->
 
-Gestão de usuários, colaboradores e unidades. **A API está completa**; o portal Angular está
-em andamento — hoje ele tem autenticação, rotas protegidas e a listagem de colaboradores, e as
-telas de usuários e unidades ainda são esqueletos.
+Gestão de usuários, colaboradores e unidades: uma API ASP.NET Core com portal Angular,
+cobrindo o CRUD das três entidades e a regra de que unidade inativa não recebe colaborador.
 
 ## Como rodar
 
@@ -13,7 +12,7 @@ docker compose up
 ```
 
 - **API + Swagger:** http://localhost:5000/swagger
-- **Portal (parcial):** `cd frontend && npm install && npm start` → http://localhost:4200
+- **Portal:** `cd frontend && npm install && npm start` → http://localhost:4200
 - **Login de avaliação:** `admin` / `admin123`
 
 O startup aplica as migrations e semeia o banco automaticamente. Os dados iniciais foram
@@ -200,6 +199,66 @@ porque a diferença de tempo entregaria o que o texto esconde; a resposta de usu
 contém a palavra "senha" nem "hash"; inativar unidade não desvincula quem já estava; remover colaborador inativa o
 usuário na mesma transação; o `PUT` recusa corpo incompleto enquanto o `PATCH` aceita; e duas criações seguidas nunca
 recebem o mesmo código, o que cobra o comportamento da sequence.
+
+## Portal
+
+```bash
+cd frontend
+npm install
+npm start
+```
+
+Angular 21 com componentes standalone — os únicos NgModules no projeto são os que o Carbon
+exporta e que os componentes importam. Signals para estado, `input()`/`output()` para a
+comunicação entre componentes e o control flow novo (`@if`, `@for`) nos templates. A
+autenticação guarda o JWT em `localStorage`, um interceptor anexa o `Bearer` e um segundo
+centraliza o erro — 401 encerra a sessão e volta ao login, o resto vira toast lendo o
+`detail` do ProblemDetails. Status 0 e 429 ganham mensagem própria, porque nesses dois casos
+não há ProblemDetails para ler.
+
+### Carbon, e qual versão do Angular ele impôs
+
+O design system é o **IBM Carbon** (`carbon-components-angular` 5.72.2), escolhido em vez do
+Angular Material porque o Material é o visual padrão de quase todo projeto Angular e o Carbon
+mostra a mesma competência com uma identidade própria.
+
+A escolha tinha um risco real: a lib **não declara `@angular/*` nas peerDependencies**, então
+não existe compatibilidade anunciada — e ela publica declarações Ivy parciais geradas com o
+compilador **14.3.0**, dez versões atrás. A compatibilidade foi estabelecida compilando, com
+um spike de um botão antes de qualquer tela: o linker do Angular **21.2.22** aceita essas
+declarações, e o portal roda sem downgrade. Não foi preciso baixar a versão do Angular.
+
+O que o Carbon **impôs** foi outra coisa: ele é uma biblioteca da era do Zone.js, então o
+projeto mantém `provideZoneChangeDetection` em vez de migrar para zoneless. O `zone.js`
+também não estava declarado como polyfill no `angular.json` — a aplicação quebrava no boot
+com `NG0908`, o que era um defeito independente do Carbon.
+
+As tabelas usam as classes `cds--data-table` sobre markup nativo, e não o `cds-table`. O
+componente do Carbon exige um `TableModel` imperativo, populado com `TableItem[][]`, que
+brigaria com signals e tornaria trabalhoso pôr botões de ação nas células. Os componentes
+interativos — botão, campo, select, modal, toast, tag, paginação — são os do Carbon.
+
+### O que a tela impede, e o que ela apenas informa
+
+O select de unidades lista **apenas as ativas**: como a API recusa com 422 um colaborador em
+unidade inativa, a tela evita o erro em vez de esperar por ele. Se nenhuma unidade estiver
+ativa, o campo explica o motivo em vez de ficar vazio sem justificativa. Na edição há uma
+exceção deliberada — a unidade atual do colaborador continua na lista mesmo inativa, marcada
+como tal, senão editar só o nome moveria a pessoa de unidade sem querer.
+
+Já a regra de que **um usuário pertence a um único colaborador** a tela não consegue prevenir:
+`ColaboradorRespostaDto` não expõe o `usuarioId`, então o portal não tem como saber quais
+usuários já estão vinculados. O select oferece todos os ativos e o 409 da API vira toast. Dá
+para resolver expondo o `usuarioId` na resposta, o que mudaria o contrato.
+
+### Limitações conscientes
+
+- **Sem testes de frontend.** O esforço foi para as funcionalidades do portal; a suíte de
+  testes do projeto é a do backend. As telas foram verificadas manualmente no navegador,
+  incluindo os caminhos de 409 e de unidade inativa.
+- Os selects de apoio carregam com `?tamanho=100`, o teto da API. Acima disso seria preciso
+  um campo com busca no servidor.
+- A paginação é por página cheia, sem preservar o estado na URL: recarregar volta à página 1.
 
 ## Desenvolvimento local
 
