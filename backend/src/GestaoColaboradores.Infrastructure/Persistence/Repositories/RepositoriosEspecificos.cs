@@ -30,6 +30,9 @@ public class ColaboradorRepository(AppDbContext context) : Repository<Colaborado
 
 public class UnidadeRepository(AppDbContext context) : Repository<Unidade>(context), IUnidadeRepository
 {
+    public Task<Unidade?> ObterComColaboradoresAsync(int id, CancellationToken ct = default) =>
+        Set.Include(u => u.Colaboradores).FirstOrDefaultAsync(u => u.Id == id, ct);
+
     public Task<List<Unidade>> ListarComColaboradoresAsync(CancellationToken ct = default) =>
         Set.AsNoTracking().Include(u => u.Colaboradores).OrderBy(u => u.Nome).ToListAsync(ct);
 }

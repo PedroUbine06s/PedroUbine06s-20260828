@@ -23,11 +23,16 @@ public abstract class ApiControllerBase : ControllerBase
         return Problema(resultado);
     }
 
-    /// <summary>POST bem-sucedido: 201 + Location.</summary>
-    protected ActionResult Criado<T>(Result<T> resultado, string rota, object valoresRota)
+    /// <summary>
+    /// POST bem-sucedido: 201 com o header Location apontando para o recurso criado.
+    /// Os valores de rota vêm por função porque só existem quando há valor — avaliá-los
+    /// antes de saber se deu certo acessaria uma referência nula no caminho de falha.
+    /// </summary>
+    protected ActionResult Criado<T>(Result<T> resultado, string rota, Func<T, object> valoresRota)
     {
-        if (resultado.EhSucesso) return CreatedAtAction(rota, valoresRota, resultado.Valor);
-        return Problema(resultado);
+        if (!resultado.EhSucesso) return Problema(resultado);
+
+        return CreatedAtAction(rota, valoresRota(resultado.Valor!), resultado.Valor);
     }
 
     private ObjectResult Problema(Result resultado)

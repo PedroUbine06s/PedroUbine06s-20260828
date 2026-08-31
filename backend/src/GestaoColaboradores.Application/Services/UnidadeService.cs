@@ -7,6 +7,7 @@ namespace GestaoColaboradores.Application.Services;
 
 public interface IUnidadeService
 {
+    Task<Result<UnidadeComColaboradoresDto>> ObterPorIdAsync(int id, CancellationToken ct = default);
     Task<Result<UnidadeRespostaDto>> CriarAsync(CriarUnidadeDto dto, CancellationToken ct = default);
     Task<Result<UnidadeRespostaDto>> AtualizarAsync(int id, AtualizarUnidadeDto dto, CancellationToken ct = default);
     Task<Result<UnidadeRespostaDto>> AtualizarParcialAsync(int id, AtualizarParcialUnidadeDto dto, CancellationToken ct = default);
@@ -16,6 +17,15 @@ public interface IUnidadeService
 
 public class UnidadeService(IUnidadeRepository unidadeRepo, IUnitOfWork uow) : IUnidadeService
 {
+    public async Task<Result<UnidadeComColaboradoresDto>> ObterPorIdAsync(int id, CancellationToken ct = default)
+    {
+        var unidade = await unidadeRepo.ObterComColaboradoresAsync(id, ct);
+
+        return unidade is null
+            ? Result<UnidadeComColaboradoresDto>.Falha($"Unidade {id} não encontrada.", TipoErro.NaoEncontrado)
+            : Result<UnidadeComColaboradoresDto>.Sucesso(ParaDtoComColaboradores(unidade));
+    }
+
     public async Task<Result<UnidadeRespostaDto>> CriarAsync(CriarUnidadeDto dto, CancellationToken ct = default)
     {
         if (await unidadeRepo.ExisteCodigoAsync(dto.Codigo, ct))
@@ -79,20 +89,18 @@ public class UnidadeService(IUnidadeRepository unidadeRepo, IUnitOfWork uow) : I
     {
         var unidades = await unidadeRepo.ListarComColaboradoresAsync(ct);
 
-        var dtos = unidades
-            .Select(u => new UnidadeComColaboradoresDto(
-                u.Id,
-                u.Codigo,
-                u.Nome,
-                u.Ativo,
-                u.Colaboradores
-                    .Select(c => new ColaboradorRespostaDto(c.Id, c.Codigo, c.Nome, u.Codigo, u.Nome))
-                    .ToList()))
-            .ToList();
-
-        return Result<List<UnidadeComColaboradoresDto>>.Sucesso(dtos);
+        return Result<List<UnidadeComColaboradoresDto>>.Sucesso(
+            unidades.Select(ParaDtoComColaboradores).ToList());
     }
 
     private static UnidadeRespostaDto ParaDto(Unidade u) =>
         new(u.Id, u.Codigo, u.Nome, u.Ativo);
+
+    // O código e o nome da unidade saem de 'u', que já está em mãos: buscá-los por
+    // c.Unidade faria o EF voltar ao banco uma vez por colaborador.
+    private static UnidadeComColaboradoresDto ParaDtoComColaboradores(Unidade u) =>
+        new(u.Id, u.Codigo, u.Nome, u.Ativo,
+            u.Colaboradores
+                .Select(c => new ColaboradorRespostaDto(c.Id, c.Codigo, c.Nome, u.Codigo, u.Nome))
+                .ToList());
 }

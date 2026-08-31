@@ -7,6 +7,7 @@ namespace GestaoColaboradores.Application.Services;
 
 public interface IColaboradorService
 {
+    Task<Result<ColaboradorRespostaDto>> ObterPorIdAsync(int id, CancellationToken ct = default);
     Task<Result<ColaboradorRespostaDto>> CriarAsync(CriarColaboradorDto dto, CancellationToken ct = default);
     Task<Result<ColaboradorRespostaDto>> AtualizarAsync(int id, AtualizarColaboradorDto dto, CancellationToken ct = default);
     Task<Result<ColaboradorRespostaDto>> AtualizarParcialAsync(int id, AtualizarParcialColaboradorDto dto, CancellationToken ct = default);
@@ -25,6 +26,15 @@ public class ColaboradorService(
     IUsuarioRepository usuarioRepo,
     IUnitOfWork uow) : IColaboradorService
 {
+    public async Task<Result<ColaboradorRespostaDto>> ObterPorIdAsync(int id, CancellationToken ct = default)
+    {
+        var colaborador = await colaboradorRepo.ObterComUnidadeAsync(id, ct);
+
+        return colaborador is null
+            ? Result<ColaboradorRespostaDto>.Falha($"Colaborador {id} não encontrado.", TipoErro.NaoEncontrado)
+            : Result<ColaboradorRespostaDto>.Sucesso(ParaDto(colaborador));
+    }
+
     public async Task<Result<ColaboradorRespostaDto>> CriarAsync(CriarColaboradorDto dto, CancellationToken ct = default)
     {
         if (await colaboradorRepo.ExisteCodigoAsync(dto.Codigo, ct))

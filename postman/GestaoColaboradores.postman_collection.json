@@ -1,6 +1,7 @@
 {
   "info": {
     "name": "Gestão de Colaboradores e Unidades",
+    "description": "Rode o login primeiro: ele salva o token no environment e todas as demais requisições passam a usá-lo automaticamente. Os códigos usados aqui são os do seed.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -17,12 +18,16 @@
             {
               "listen": "test",
               "script": {
+                "type": "text/javascript",
                 "exec": [
+                  "pm.test('200 e token recebido', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().token).to.be.a('string');",
+                  "});",
                   "if (pm.response.code === 200) {",
                   "    pm.environment.set('token', pm.response.json().token);",
                   "}"
-                ],
-                "type": "text/javascript"
+                ]
               }
             }
           ],
@@ -31,10 +36,58 @@
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "url": "{{baseUrl}}/api/v1/auth/login",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"login\": \"admin\",\n  \"senha\": \"admin123\"\n}"
+            "body": { "mode": "raw", "raw": "{\n  \"login\": \"admin\",\n  \"senha\": \"admin123\"\n}" }
+          }
+        },
+        {
+          "name": "Login com senha errada (esperado 401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 com mensagem genérica', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "    pm.expect(pm.response.json().detail).to.include('inválidos');",
+                  "});"
+                ]
+              }
             }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/auth/login",
+            "body": { "mode": "raw", "raw": "{\n  \"login\": \"admin\",\n  \"senha\": \"senhaerrada\"\n}" }
+          }
+        },
+        {
+          "name": "Login de usuário inativo (esperado 401)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/auth/login",
+            "body": { "mode": "raw", "raw": "{\n  \"login\": \"carlos.lima\",\n  \"senha\": \"senha123\"\n}" }
+          }
+        },
+        {
+          "name": "Sem token (esperado 401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('401', () => pm.response.to.have.status(401));"]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/colaboradores"
           }
         }
       ]
@@ -43,36 +96,130 @@
       "name": "Usuários",
       "item": [
         {
-          "name": "Listar (todos)",
+          "name": "Listar todos",
           "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/usuarios" }
         },
         {
-          "name": "Listar por status (requisito)",
-          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/usuarios?ativo=true" }
+          "name": "Listar apenas inativos (requisito do enunciado)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('todos vêm inativos', function () {",
+                  "    pm.response.json().forEach(u => pm.expect(u.ativo).to.eql(false));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/usuarios?ativo=false",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "usuarios"],
+              "query": [{ "key": "ativo", "value": "false" }]
+            }
+          }
         },
         {
-          "name": "Criar",
+          "name": "Obter por id",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/usuarios/1" }
+        },
+        {
+          "name": "Criar (guarda o id criado)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 com header Location', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    pm.expect(pm.response.headers.get('Location')).to.be.a('string');",
+                  "});",
+                  "if (pm.response.code === 201) {",
+                  "    pm.environment.set('usuarioId', pm.response.json().id);",
+                  "}"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "url": "{{baseUrl}}/api/v1/usuarios",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"codigo\": \"USR-010\",\n  \"login\": \"maria.silva\",\n  \"senha\": \"senha123\",\n  \"ativo\": true\n}"
+              "raw": "{\n  \"codigo\": \"USR-010\",\n  \"login\": \"novo.usuario\",\n  \"senha\": \"senha123\",\n  \"ativo\": true\n}"
             }
           }
         },
         {
-          "name": "Atualizar (somente senha e status)",
+          "name": "Criar com código duplicado (esperado 409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('409', () => pm.response.to.have.status(409));"]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/usuarios",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo\": \"USR-001\",\n  \"login\": \"outro.login\",\n  \"senha\": \"senha123\",\n  \"ativo\": true\n}"
+            }
+          }
+        },
+        {
+          "name": "Criar com senha curta (esperado 400)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/usuarios",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo\": \"USR-011\",\n  \"login\": \"senha.curta\",\n  \"senha\": \"123\",\n  \"ativo\": true\n}"
+            }
+          }
+        },
+        {
+          "name": "PUT — substitui senha e status",
           "request": {
             "method": "PUT",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "url": "{{baseUrl}}/api/v1/usuarios/2",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"senha\": \"novaSenha123\",\n  \"ativo\": false\n}"
-            }
+            "url": "{{baseUrl}}/api/v1/usuarios/{{usuarioId}}",
+            "body": { "mode": "raw", "raw": "{\n  \"senha\": \"novaSenha123\",\n  \"ativo\": true\n}" }
           }
+        },
+        {
+          "name": "PATCH — inativa sem tocar na senha",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/usuarios/{{usuarioId}}",
+            "body": { "mode": "raw", "raw": "{\n  \"ativo\": false\n}" }
+          }
+        },
+        {
+          "name": "PATCH sem nenhum campo (esperado 400)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/usuarios/{{usuarioId}}",
+            "body": { "mode": "raw", "raw": "{}" }
+          }
+        },
+        {
+          "name": "Obter id inexistente (esperado 404)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/usuarios/9999" }
         }
       ]
     },
@@ -80,31 +227,75 @@
       "name": "Unidades",
       "item": [
         {
-          "name": "Listar (com colaboradores — requisito)",
+          "name": "Listar com colaboradores (requisito do enunciado)",
           "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/unidades" }
         },
         {
-          "name": "Criar",
+          "name": "Obter por id",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/unidades/1" }
+        },
+        {
+          "name": "Criar (guarda o id criado)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201', () => pm.response.to.have.status(201));",
+                  "if (pm.response.code === 201) {",
+                  "    pm.environment.set('unidadeId', pm.response.json().id);",
+                  "}"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "url": "{{baseUrl}}/api/v1/unidades",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"codigo\": \"UNI-010\",\n  \"nome\": \"Filial Norte\"\n}"
-            }
+            "body": { "mode": "raw", "raw": "{\n  \"codigo\": \"UNI-010\",\n  \"nome\": \"Filial Norte\"\n}" }
           }
         },
         {
-          "name": "Inativar",
+          "name": "PUT — substitui nome e status (exige os dois)",
           "request": {
             "method": "PUT",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "url": "{{baseUrl}}/api/v1/unidades/1",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"nome\": \"Matriz\",\n  \"ativo\": false\n}"
+            "url": "{{baseUrl}}/api/v1/unidades/{{unidadeId}}",
+            "body": { "mode": "raw", "raw": "{\n  \"nome\": \"Filial Norte\",\n  \"ativo\": true\n}" }
+          }
+        },
+        {
+          "name": "PATCH — inativa mandando só o status",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 e unidade inativa', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().ativo).to.eql(false);",
+                  "});"
+                ]
+              }
             }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/unidades/{{unidadeId}}",
+            "body": { "mode": "raw", "raw": "{\n  \"ativo\": false\n}" }
+          }
+        },
+        {
+          "name": "PUT sem o nome (esperado 400 — PUT exige tudo)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/unidades/{{unidadeId}}",
+            "body": { "mode": "raw", "raw": "{\n  \"ativo\": false\n}" }
           }
         }
       ]
@@ -117,51 +308,126 @@
           "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/colaboradores" }
         },
         {
-          "name": "Criar",
+          "name": "Obter por id",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/colaboradores/1" }
+        },
+        {
+          "name": "Criar em unidade ativa (guarda o id criado)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201', () => pm.response.to.have.status(201));",
+                  "if (pm.response.code === 201) {",
+                  "    pm.environment.set('colaboradorId', pm.response.json().id);",
+                  "}"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "url": "{{baseUrl}}/api/v1/colaboradores",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"codigo\": \"COL-010\",\n  \"nome\": \"Maria Silva\",\n  \"codigoUnidade\": \"UNI-001\",\n  \"codigoUsuario\": \"USR-010\"\n}"
+              "raw": "{\n  \"codigo\": \"COL-010\",\n  \"nome\": \"Novo Colaborador\",\n  \"codigoUnidade\": \"UNI-001\",\n  \"codigoUsuario\": \"USR-010\"\n}"
             }
           }
         },
         {
-          "name": "Criar em unidade INATIVA (esperado: 422)",
+          "name": "Criar em unidade INATIVA (esperado 422 — regra central)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('422 por unidade inativa', function () {",
+                  "    pm.response.to.have.status(422);",
+                  "    pm.expect(pm.response.json().detail).to.include('inativa');",
+                  "});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "url": "{{baseUrl}}/api/v1/colaboradores",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"codigo\": \"COL-011\",\n  \"nome\": \"João Souza\",\n  \"codigoUnidade\": \"UNI-002\",\n  \"codigoUsuario\": \"USR-010\"\n}"
+              "raw": "{\n  \"codigo\": \"COL-011\",\n  \"nome\": \"Deve Falhar\",\n  \"codigoUnidade\": \"UNI-002\",\n  \"codigoUsuario\": \"USR-010\"\n}"
             }
           }
         },
         {
-          "name": "Criar com código duplicado (esperado: 409)",
+          "name": "Criar com código duplicado (esperado 409)",
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "url": "{{baseUrl}}/api/v1/colaboradores",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"codigo\": \"COL-010\",\n  \"nome\": \"Duplicado\",\n  \"codigoUnidade\": \"UNI-001\",\n  \"codigoUsuario\": \"USR-010\"\n}"
+              "raw": "{\n  \"codigo\": \"COL-001\",\n  \"nome\": \"Duplicado\",\n  \"codigoUnidade\": \"UNI-001\",\n  \"codigoUsuario\": \"USR-010\"\n}"
             }
           }
         },
         {
-          "name": "Remover",
-          "request": { "method": "DELETE", "url": "{{baseUrl}}/api/v1/colaboradores/1" }
+          "name": "Criar com unidade inexistente (esperado 404)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/colaboradores",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo\": \"COL-012\",\n  \"nome\": \"Sem Unidade\",\n  \"codigoUnidade\": \"NAO-EXISTE\",\n  \"codigoUsuario\": \"USR-010\"\n}"
+            }
+          }
         },
         {
-          "name": "Sem token (esperado: 401)",
+          "name": "PUT — substitui nome e unidade",
           "request": {
-            "auth": { "type": "noauth" },
-            "method": "GET",
-            "url": "{{baseUrl}}/api/v1/colaboradores"
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/colaboradores/{{colaboradorId}}",
+            "body": { "mode": "raw", "raw": "{\n  \"nome\": \"Nome Atualizado\",\n  \"codigoUnidade\": \"UNI-001\"\n}" }
+          }
+        },
+        {
+          "name": "PATCH — renomeia sem reenviar a unidade",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/colaboradores/{{colaboradorId}}",
+            "body": { "mode": "raw", "raw": "{\n  \"nome\": \"Só o Nome Mudou\"\n}" }
+          }
+        },
+        {
+          "name": "PATCH transferindo para unidade inativa (esperado 422)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/colaboradores/{{colaboradorId}}",
+            "body": { "mode": "raw", "raw": "{\n  \"codigoUnidade\": \"UNI-002\"\n}" }
+          }
+        },
+        {
+          "name": "Remover (esperado 204 — e inativa o usuário vinculado)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('204', () => pm.response.to.have.status(204));"]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/api/v1/colaboradores/{{colaboradorId}}"
           }
         }
       ]

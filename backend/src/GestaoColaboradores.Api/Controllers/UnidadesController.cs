@@ -8,25 +8,47 @@ namespace GestaoColaboradores.Api.Controllers;
 [Authorize]
 public class UnidadesController(IUnidadeService service) : ApiControllerBase
 {
-    /// <summary>Requisito: listar todas as unidades e seus colaboradores relacionados.</summary>
+    /// <summary>Lista todas as unidades com os colaboradores de cada uma.</summary>
     [HttpGet]
+    [ProducesResponseType(typeof(List<UnidadeComColaboradoresDto>), StatusCodes.Status200OK)]
     public async Task<ActionResult> Listar(CancellationToken ct) =>
         DeResultado(await service.ListarAsync(ct));
 
+    /// <summary>Retorna uma unidade pelo id, com seus colaboradores.</summary>
+    [HttpGet("{id:int}")]
+    [ProducesResponseType(typeof(UnidadeComColaboradoresDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult> ObterPorId(int id, CancellationToken ct) =>
+        DeResultado(await service.ObterPorIdAsync(id, ct));
+
+    /// <summary>Cadastra uma unidade. O código precisa ser único.</summary>
     [HttpPost]
+    [ProducesResponseType(typeof(UnidadeRespostaDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<ActionResult> Criar(CriarUnidadeDto dto, CancellationToken ct)
     {
         var resultado = await service.CriarAsync(dto, ct);
-        return Criado(resultado, nameof(Listar), new { });
+
+        return Criado(resultado, nameof(ObterPorId), u => new { id = u.Id });
     }
 
-    /// <summary>Inativar por aqui: a partir daí o POST de colaborador nessa unidade responde 422.</summary>
+    /// <summary>Substitui nome e status. Exige os dois campos.</summary>
     [HttpPut("{id:int}")]
+    [ProducesResponseType(typeof(UnidadeRespostaDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult> Atualizar(int id, AtualizarUnidadeDto dto, CancellationToken ct) =>
         DeResultado(await service.AtualizarAsync(id, dto, ct));
 
-    /// <summary>PATCH: inativar mandando apenas {"ativo": false}, sem reenviar o nome.</summary>
+    /// <summary>
+    /// Atualização parcial. É por aqui que se inativa uma unidade, enviando apenas
+    /// <c>{ "ativo": false }</c> — a partir daí ela recusa novos colaboradores com 422.
+    /// </summary>
     [HttpPatch("{id:int}")]
+    [ProducesResponseType(typeof(UnidadeRespostaDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult> AtualizarParcial(int id, AtualizarParcialUnidadeDto dto, CancellationToken ct) =>
         DeResultado(await service.AtualizarParcialAsync(id, dto, ct));
 }

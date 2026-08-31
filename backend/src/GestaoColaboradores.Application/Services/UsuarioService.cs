@@ -7,6 +7,7 @@ namespace GestaoColaboradores.Application.Services;
 
 public interface IUsuarioService
 {
+    Task<Result<UsuarioRespostaDto>> ObterPorIdAsync(int id, CancellationToken ct = default);
     Task<Result<UsuarioRespostaDto>> CriarAsync(CriarUsuarioDto dto, CancellationToken ct = default);
     Task<Result<UsuarioRespostaDto>> AtualizarAsync(int id, AtualizarUsuarioDto dto, CancellationToken ct = default);
     Task<Result<UsuarioRespostaDto>> AtualizarParcialAsync(int id, AtualizarParcialUsuarioDto dto, CancellationToken ct = default);
@@ -19,6 +20,15 @@ public class UsuarioService(
     IPasswordHasher hasher,          // Strategy: nunca armazene a senha em texto plano
     IUnitOfWork uow) : IUsuarioService
 {
+    public async Task<Result<UsuarioRespostaDto>> ObterPorIdAsync(int id, CancellationToken ct = default)
+    {
+        var usuario = await usuarioRepo.ObterPorIdAsync(id, ct);
+
+        return usuario is null
+            ? Result<UsuarioRespostaDto>.Falha($"Usuário {id} não encontrado.", TipoErro.NaoEncontrado)
+            : Result<UsuarioRespostaDto>.Sucesso(ParaDto(usuario));
+    }
+
     public async Task<Result<UsuarioRespostaDto>> CriarAsync(CriarUsuarioDto dto, CancellationToken ct = default)
     {
         if (await usuarioRepo.ExisteCodigoAsync(dto.Codigo, ct))

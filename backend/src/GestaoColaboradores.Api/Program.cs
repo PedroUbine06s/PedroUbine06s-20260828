@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Text;
 using GestaoColaboradores.Api.Middlewares;
 using GestaoColaboradores.Application;
@@ -45,7 +46,18 @@ builder.Services.AddAuthorization();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(opt =>
 {
-    opt.SwaggerDoc("v1", new OpenApiInfo { Title = "Gestão de Colaboradores e Unidades", Version = "v1" });
+    opt.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "Gestão de Colaboradores e Unidades",
+        Version = "v1",
+        Description = "Cadastro de usuários, unidades e colaboradores. Autenticação por Bearer token: "
+                    + "obtenha o token em /api/v1/auth/login e informe-o no botão Authorize."
+    });
+
+    // Faz os <summary> dos controllers aparecerem como descrição de cada endpoint.
+    var xml = Path.Combine(AppContext.BaseDirectory, $"{Assembly.GetExecutingAssembly().GetName().Name}.xml");
+    if (File.Exists(xml))
+        opt.IncludeXmlComments(xml);
     opt.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Name = "Authorization",

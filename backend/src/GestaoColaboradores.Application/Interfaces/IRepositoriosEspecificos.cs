@@ -25,4 +25,7 @@ public interface IUnidadeRepository : IRepository<Unidade>
 {
     /// <summary>Listagem do enunciado: unidades com seus colaboradores (Include).</summary>
     Task<List<Unidade>> ListarComColaboradoresAsync(CancellationToken ct = default);
+
+    /// <summary>Uma unidade com seus colaboradores, para o endpoint de detalhe.</summary>
+    Task<Unidade?> ObterComColaboradoresAsync(int id, CancellationToken ct = default);
 }

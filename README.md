@@ -59,8 +59,6 @@ concorrência entre requisições simultâneas é resolvida pelo índice único,
 
 ## Decisões de domínio
 
-<!-- TODO: preencher conforme implementar -->
-
 - **Unidade inativa não recebe colaborador** — regra expressa no domínio
   (`Unidade.PodeReceberColaborador` + guarda em `Colaborador.Criar`), retornando **422**
   na API e refletida no portal (o select de unidades só lista ativas).
@@ -97,15 +95,18 @@ Todos os demais endpoints exigem o token.
 | Método | Rota | Descrição |
 |--------|------|-----------|
 | GET | `/api/v1/usuarios?ativo=` | Lista usuários, com filtro opcional por status |
+| GET | `/api/v1/usuarios/{id}` | Retorna um usuário |
 | POST | `/api/v1/usuarios` | Cadastra usuário |
 | PUT | `/api/v1/usuarios/{id}` | Atualiza **somente** senha e status |
 | PATCH | `/api/v1/usuarios/{id}` | Atualização parcial: envie só os campos que mudam |
 | GET | `/api/v1/colaboradores` | Lista colaboradores com a unidade |
+| GET | `/api/v1/colaboradores/{id}` | Retorna um colaborador |
 | POST | `/api/v1/colaboradores` | Cadastra colaborador (409 duplicado / 422 unidade inativa) |
 | PUT | `/api/v1/colaboradores/{id}` | Atualiza nome e unidade |
 | PATCH | `/api/v1/colaboradores/{id}` | Renomeia ou transfere, sem exigir os dois campos |
 | DELETE | `/api/v1/colaboradores/{id}` | Remove colaborador |
 | GET | `/api/v1/unidades` | Lista unidades com seus colaboradores |
+| GET | `/api/v1/unidades/{id}` | Retorna uma unidade com seus colaboradores |
 | POST | `/api/v1/unidades` | Cadastra unidade |
 | PUT | `/api/v1/unidades/{id}` | Atualiza nome / ativa / inativa |
 | PATCH | `/api/v1/unidades/{id}` | Inativa com apenas `{"ativo": false}` |
@@ -117,7 +118,9 @@ ser assim" e "apenas inative a unidade". Um `PATCH` sem nenhum campo é recusado
 campos não é um pedido de "não mude nada", é engano do cliente.
 
 Erros seguem **ProblemDetails (RFC 7807)**.
-Collection do Postman com auto-token e casos de erro: [`postman/`](postman/).
+A collection do Postman em [`postman/`](postman/) tem 30 requisições cobrindo os caminhos
+felizes e os de erro (401, 400, 404, 409, 422), com testes automáticos que verificam o status
+e o corpo. O login salva o token no environment, então basta rodá-lo primeiro.
 
 ## Testes
 
