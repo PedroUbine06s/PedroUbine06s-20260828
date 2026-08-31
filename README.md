@@ -134,7 +134,7 @@ Todos os demais endpoints exigem o token.
 
 | Método | Rota | Descrição |
 |--------|------|-----------|
-| GET | `/api/v1/usuarios?ativo=&pagina=&tamanho=` | Lista usuários, com filtro opcional por status |
+| GET | `/api/v1/usuarios?ativo=&semColaborador=&pagina=&tamanho=` | Lista usuários. `semColaborador=true` traz só quem ainda não tem colaborador |
 | GET | `/api/v1/usuarios/{id}` | Retorna um usuário |
 | POST | `/api/v1/usuarios` | Cadastra usuário |
 | PUT | `/api/v1/usuarios/{id}` | Atualiza **somente** senha e status |
@@ -182,13 +182,13 @@ cd backend
 dotnet test
 ```
 
-**88 testes**, divididos em duas suítes com propósitos distintos.
+**91 testes**, divididos em duas suítes com propósitos distintos.
 
-Os **62 de unidade** (xUnit + NSubstitute) rodam em ~100 ms e cobrem o domínio sem mock algum
+Os **63 de unidade** (xUnit + NSubstitute) rodam em ~100 ms e cobrem o domínio sem mock algum
 e os serviços com repositórios simulados. Eles verificam efeito, não só retorno: quando uma
 regra falha, o teste assere que `CommitAsync` **não** foi chamado.
 
-Os **26 de integração** (`WebApplicationFactory` + **Testcontainers**) sobem um PostgreSQL real
+Os **28 de integração** (`WebApplicationFactory` + **Testcontainers**) sobem um PostgreSQL real
 em contêiner e exercitam HTTP de ponta a ponta — pipeline de autenticação, validação, migrations
 e seed inclusos. Não se usa InMemory provider aqui de propósito: ele não tem índice único, e é
 justamente o índice que garante a unicidade de código e login.
@@ -197,7 +197,8 @@ Alguns que valem destaque: o login devolve mensagem indistinguível entre usuár
 senha errada, e roda o BCrypt mesmo quando o login não existe — mensagem igual não bastaria,
 porque a diferença de tempo entregaria o que o texto esconde; a resposta de usuários **nunca**
 contém a palavra "senha" nem "hash"; inativar unidade não desvincula quem já estava; remover colaborador inativa o
-usuário na mesma transação; o `PUT` recusa corpo incompleto enquanto o `PATCH` aceita; e duas criações seguidas nunca
+usuário na mesma transação; o filtro `semColaborador` deixa de listar um usuário assim que ele
+ganha colaborador, e não anula o filtro de status quando os dois vêm juntos; o `PUT` recusa corpo incompleto enquanto o `PATCH` aceita; e duas criações seguidas nunca
 recebem o mesmo código, o que cobra o comportamento da sequence.
 
 ## Portal
@@ -238,7 +239,7 @@ componente do Carbon exige um `TableModel` imperativo, populado com `TableItem[]
 brigaria com signals e tornaria trabalhoso pôr botões de ação nas células. Os componentes
 interativos — botão, campo, select, modal, toast, tag, paginação — são os do Carbon.
 
-### O que a tela impede, e o que ela apenas informa
+### O que a tela impede antes de a API recusar
 
 O select de unidades lista **apenas as ativas**: como a API recusa com 422 um colaborador em
 unidade inativa, a tela evita o erro em vez de esperar por ele. Se nenhuma unidade estiver
@@ -246,10 +247,19 @@ ativa, o campo explica o motivo em vez de ficar vazio sem justificativa. Na edi�
 exceção deliberada — a unidade atual do colaborador continua na lista mesmo inativa, marcada
 como tal, senão editar só o nome moveria a pessoa de unidade sem querer.
 
-Já a regra de que **um usuário pertence a um único colaborador** a tela não consegue prevenir:
-`ColaboradorRespostaDto` não expõe o `usuarioId`, então o portal não tem como saber quais
-usuários já estão vinculados. O select oferece todos os ativos e o 409 da API vira toast. Dá
-para resolver expondo o `usuarioId` na resposta, o que mudaria o contrato.
+A regra de que **um usuário pertence a um único colaborador** recebe o mesmo tratamento, mas
+exigiu mexer na API. O portal não tinha como saber quais usuários já estavam vinculados:
+`ColaboradorRespostaDto` não expõe o `usuarioId`, de propósito. A saída óbvia — expor o
+`usuarioId` e cruzar no cliente — é ruim: obrigaria a varrer todas as páginas de colaboradores
+só para montar o conjunto de ocupados, e quebraria assim que a base crescesse.
+
+O filtro foi para onde a pergunta pertence: `GET /usuarios?semColaborador=true`. Vira um
+`EXISTS` no SQL, o banco resolve o vínculo sem carregar colaborador nenhum, e a paginação
+continua correta porque o recorte acontece depois do filtro.
+
+O que **não** saiu do código foi o tratamento do 409. Filtrar é conveniência, não garantia:
+duas pessoas cadastrando ao mesmo tempo escolhem o mesmo usuário e uma leva conflito. A
+autoridade continua no servidor; a tela só evita o caminho previsível.
 
 ### Limitações conscientes
 
@@ -257,7 +267,7 @@ para resolver expondo o `usuarioId` na resposta, o que mudaria o contrato.
   testes do projeto é a do backend. As telas foram verificadas manualmente no navegador,
   incluindo os caminhos de 409 e de unidade inativa.
 - Os selects de apoio carregam com `?tamanho=100`, o teto da API. Acima disso seria preciso
-  um campo com busca no servidor.
+  um campo com busca no servidor — o filtro já é server-side, falta só a busca por texto.
 - A paginação é por página cheia, sem preservar o estado na URL: recarregar volta à página 1.
 
 ## Desenvolvimento local
