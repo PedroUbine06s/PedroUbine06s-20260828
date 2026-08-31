@@ -129,9 +129,21 @@ cd backend
 dotnet test
 ```
 
-- **Unidade** (xUnit + NSubstitute): regras de negócio no domínio e nos services.
-- **Integração** (`WebApplicationFactory` + **Testcontainers**): PostgreSQL real em
-  container por suíte — sem InMemory provider mascarando comportamento.
+**80 testes**, divididos em duas suítes com propósitos distintos.
+
+Os **63 de unidade** (xUnit + NSubstitute) rodam em ~100 ms e cobrem o domínio sem mock algum
+e os serviços com repositórios simulados. Eles verificam efeito, não só retorno: quando uma
+regra falha, o teste assere que `CommitAsync` **não** foi chamado.
+
+Os **17 de integração** (`WebApplicationFactory` + **Testcontainers**) sobem um PostgreSQL real
+em contêiner e exercitam HTTP de ponta a ponta — pipeline de autenticação, validação, migrations
+e seed inclusos. Não se usa InMemory provider aqui de propósito: ele não tem índice único, e é
+justamente o índice que garante a unicidade de código e login.
+
+Alguns que valem destaque: o login devolve mensagem **indistinguível** entre usuário inexistente
+e senha errada (contra enumeração de usuários); a resposta de usuários **nunca** contém a palavra
+"senha" nem "hash"; inativar unidade não desvincula quem já estava; remover colaborador inativa o
+usuário na mesma transação; e o `PUT` recusa corpo incompleto enquanto o `PATCH` aceita.
 
 ## Desenvolvimento local
 
