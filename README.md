@@ -57,7 +57,10 @@ concorrência entre requisições simultâneas é resolvida pelo índice único,
   na API e refletida no portal (o select de unidades só lista ativas).
 - **Update de usuário limitado a senha e status por contrato**: o DTO de atualização só
   possui esses dois campos — a API impede o erro em vez de validá-lo depois.
-- **Remoção de colaborador:** <!-- TODO: documentar a decisão sobre o usuário vinculado -->
+- **Remoção de colaborador inativa o usuário vinculado** — das três saídas possíveis, apagar
+  o usuário destruiria o histórico de quem fez o quê, e deixá-lo ativo manteria uma
+  credencial válida sem dono. Inativar encerra o acesso preservando o rastro. As duas
+  alterações acontecem no mesmo commit, então ou ambas valem ou nenhuma vale.
 - **Senhas:** BCrypt; hash jamais exposto em resposta.
 - **Limites de tamanho em constante única** — `BaseEntity.TamanhoMaximoCodigo` e afins são
   lidos tanto pela validação do domínio quanto pelo `HasMaxLength` do schema, de modo que o

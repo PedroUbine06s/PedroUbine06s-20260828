@@ -56,21 +56,46 @@ public class ColaboradorService(
         return Result<List<ColaboradorRespostaDto>>.Sucesso(colaboradores.Select(ParaDto).ToList());
     }
 
-    public Task<Result<ColaboradorRespostaDto>> AtualizarAsync(int id, AtualizarColaboradorDto dto, CancellationToken ct = default)
+    public async Task<Result<ColaboradorRespostaDto>> AtualizarAsync(int id, AtualizarColaboradorDto dto, CancellationToken ct = default)
     {
-        // TODO: buscar por id (404 se não existir), buscar nova unidade (404 se não existir),
-        //       chamar colaborador.AlterarNome(...) e colaborador.AlterarUnidade(...), commitar.
-        //       Chame os dois ANTES do CommitAsync: nunca commite entre eles, ou uma falha
-        //       na segunda alteração deixaria a primeira gravada.
-        throw new NotImplementedException();
+        var colaborador = await colaboradorRepo.ObterPorIdAsync(id, ct);
+        if (colaborador is null)
+            return Result<ColaboradorRespostaDto>.Falha($"Colaborador {id} não encontrado.", TipoErro.NaoEncontrado);
+
+        var unidade = await unidadeRepo.ObterPorCodigoAsync(dto.CodigoUnidade, ct);
+        if (unidade is null)
+            return Result<ColaboradorRespostaDto>.Falha("Unidade não encontrada.", TipoErro.NaoEncontrado);
+
+        if (!unidade.PodeReceberColaborador)
+            return Result<ColaboradorRespostaDto>.Falha(
+                "Unidade inativa não pode receber colaboradores.", TipoErro.RegraNegocio);
+
+        // As duas alterações ocorrem antes do commit: se a segunda falhasse depois de um
+        // commit da primeira, o colaborador ficaria gravado pela metade.
+        colaborador.AlterarNome(dto.Nome);
+        colaborador.AlterarUnidade(unidade);
+
+        await uow.CommitAsync(ct);
+
+        return Result<ColaboradorRespostaDto>.Sucesso(ParaDto(colaborador));
     }
 
-    public Task<Result> RemoverAsync(int id, CancellationToken ct = default)
+    public async Task<Result> RemoverAsync(int id, CancellationToken ct = default)
     {
-        // TODO: buscar por id (404 se não existir), remover e commitar.
-        // DECISÃO A DOCUMENTAR NO README: o que fazer com o usuário vinculado?
-        // Sugestão: inativá-lo junto (usuario.Inativar()) para não deixar acesso órfão.
-        throw new NotImplementedException();
+        var colaborador = await colaboradorRepo.ObterPorIdAsync(id, ct);
+        if (colaborador is null)
+            return Result.Falha($"Colaborador {id} não encontrado.", TipoErro.NaoEncontrado);
+
+        // Decisão de domínio: o usuário vinculado é INATIVADO, não excluído. Remover o
+        // colaborador encerra o acesso, mas apagar o usuário destruiria o histórico de quem
+        // fez o quê — e deixá-lo ativo manteria uma credencial válida sem dono.
+        var usuario = await usuarioRepo.ObterPorIdAsync(colaborador.UsuarioId, ct);
+        usuario?.Inativar();
+
+        colaboradorRepo.Remover(colaborador);
+        await uow.CommitAsync(ct);
+
+        return Result.Sucesso();
     }
 
     private static ColaboradorRespostaDto ParaDto(Colaborador c) =>
