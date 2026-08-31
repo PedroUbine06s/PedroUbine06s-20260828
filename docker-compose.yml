@@ -1,17 +1,20 @@
+# Os valores vêm do .env na raiz, que o compose carrega sozinho. Este arquivo descreve
+# a topologia; os valores moram num lugar só, e variável de ambiente os sobrescreve.
+
 services:
   db:
     image: postgres:16-alpine
     container_name: gestao-db
     environment:
-      POSTGRES_USER: gestao
-      POSTGRES_PASSWORD: gestao123        # TODO: mover para .env antes de publicar o repo
-      POSTGRES_DB: gestao_colaboradores
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     ports:
       - "5432:5432"
     volumes:
       - gestao-pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U gestao -d gestao_colaboradores"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -26,9 +29,8 @@ services:
         condition: service_healthy
     environment:
       ASPNETCORE_ENVIRONMENT: Development
-      ConnectionStrings__Default: "Host=db;Port=5432;Database=gestao_colaboradores;Username=gestao;Password=gestao123"
-      # Segredo próprio do contêiner, diferente do valor de desenvolvimento versionado.
-      Jwt__Secret: "${JWT_SECRET:-segredo-do-compose-trocar-em-producao-32c}"
+      ConnectionStrings__Default: "Host=db;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}"
+      Jwt__Secret: ${JWT_SECRET}
       Jwt__ExpiracaoMinutos: "60"
       Jwt__Emissor: "GestaoColaboradores"
     ports:

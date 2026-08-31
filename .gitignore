@@ -10,7 +10,10 @@ dist/
 .angular/
 
 # Ambiente
+# O .env da raiz é versionado de propósito: só valores de desenvolvimento, para que
+# clonar e rodar não exija configuração. Qualquer outro .env é local e fica de fora.
 *.env
+!.env
 appsettings.Local.json
 
 # Editor
