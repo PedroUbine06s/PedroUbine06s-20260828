@@ -1,10 +1,11 @@
 import { Component, inject } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthService } from './core/services/auth.service';
+import { NotificacoesComponent } from './shared/notificacoes.component';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, NotificacoesComponent],
   template: `
     @if (auth.estaLogado()) {
       <nav class="topo">
@@ -15,6 +16,7 @@ import { AuthService } from './core/services/auth.service';
         <button (click)="sair()">Sair</button>
       </nav>
     }
+    <app-notificacoes />
     <main class="conteudo">
       <router-outlet />
     </main>

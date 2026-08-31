@@ -45,8 +45,8 @@ export class ColaboradoresListaComponent {
 
   constructor() {
     this.service.listar().subscribe({
-      next: lista => {
-        this.colaboradores.set(lista);
+      next: pagina => {
+        this.colaboradores.set(pagina.itens);
         this.carregando.set(false);
       },
       error: () => this.carregando.set(false)
