@@ -16,13 +16,19 @@ import { NotificacoesComponent } from './shared/notificacoes.component';
         brand=""
         name="Gestão de Colaboradores"
         [route]="['/colaboradores']"
-        [useRouter]="true">
+        [useRouter]="true"
+      >
         <cds-header-navigation>
           @for (item of navegacao; track item.rota) {
+            <!-- activeLinkClass não tem valor padrão no cds-header-item e é repassado
+                 direto ao routerLinkActive, que faz split() nele: sem isso o Angular
+                 lança TypeError a cada item do menu no carregamento da página. -->
             <cds-header-item
               [route]="[item.rota]"
               [useRouter]="true"
-              [isCurrentPage]="rotaAtiva() === item.rota">
+              activeLinkClass="cds--header__menu-item--current"
+              [isCurrentPage]="rotaAtiva() === item.rota"
+            >
               {{ item.rotulo }}
             </cds-header-item>
           }
@@ -41,9 +47,18 @@ import { NotificacoesComponent } from './shared/notificacoes.component';
     </main>
   `,
   styles: `
-    .conteudo { padding: 1.5rem; max-width: 72rem; margin: 0 auto; }
-    .conteudo.com-cabecalho { margin-top: 3rem; }
-    .cds--header__action { width: auto; padding: 0 1rem; }
+    .conteudo {
+      padding: 1.5rem;
+      max-width: 72rem;
+      margin: 0 auto;
+    }
+    .conteudo.com-cabecalho {
+      margin-top: 3rem;
+    }
+    .cds--header__action {
+      width: auto;
+      padding: 0 1rem;
+    }
   `
 })
 export class AppComponent {
