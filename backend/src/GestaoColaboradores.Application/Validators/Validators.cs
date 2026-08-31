@@ -1,25 +1,46 @@
 using FluentValidation;
 using GestaoColaboradores.Application.Dtos;
+using GestaoColaboradores.Domain.Common;
+using GestaoColaboradores.Domain.Entidades;
 
 namespace GestaoColaboradores.Application.Validators;
 
-// EXEMPLO COMPLETO — replique o padrão para os demais DTOs de entrada.
-public class CriarColaboradorValidator : AbstractValidator<CriarColaboradorDto>
+// Os limites de tamanho vêm das constantes do domínio: validação de entrada, invariante da
+// entidade e schema do banco leem da mesma fonte.
+//
+// O que NÃO vem de lá são as regras sobre a senha em texto puro. Elas só podem existir aqui,
+// porque uma camada abaixo a senha já virou hash e o texto original deixou de existir.
+
+/// <summary>Regras da senha digitada, aplicáveis apenas na borda.</summary>
+internal static class RegrasSenha
 {
-    public CriarColaboradorValidator()
-    {
-        RuleFor(x => x.Codigo).NotEmpty().MaximumLength(20);
-        RuleFor(x => x.Nome).NotEmpty().MaximumLength(150);
-        RuleFor(x => x.CodigoUnidade).NotEmpty();
-        RuleFor(x => x.CodigoUsuario).NotEmpty();
-    }
+    public const int TamanhoMinimo = 8;
+
+    /// <summary>O BCrypt ignora o que passa de 72 bytes, em silêncio. Recusar é melhor que truncar.</summary>
+    public const int TamanhoMaximo = 72;
 }
 
 public class CriarUsuarioValidator : AbstractValidator<CriarUsuarioDto>
 {
     public CriarUsuarioValidator()
     {
-        // TODO: código/login obrigatórios; senha com tamanho mínimo (ex.: 6+)
+        RuleFor(x => x.Codigo).NotEmpty().MaximumLength(BaseEntity.TamanhoMaximoCodigo);
+        RuleFor(x => x.Login).NotEmpty().MaximumLength(Usuario.TamanhoMaximoLogin);
+        RuleFor(x => x.Senha)
+            .NotEmpty()
+            .MinimumLength(RegrasSenha.TamanhoMinimo)
+            .MaximumLength(RegrasSenha.TamanhoMaximo);
+    }
+}
+
+public class AtualizarUsuarioValidator : AbstractValidator<AtualizarUsuarioDto>
+{
+    public AtualizarUsuarioValidator()
+    {
+        RuleFor(x => x.Senha)
+            .MinimumLength(RegrasSenha.TamanhoMinimo)
+            .MaximumLength(RegrasSenha.TamanhoMaximo)
+            .When(x => !string.IsNullOrWhiteSpace(x.Senha));
     }
 }
 
@@ -27,9 +48,44 @@ public class CriarUnidadeValidator : AbstractValidator<CriarUnidadeDto>
 {
     public CriarUnidadeValidator()
     {
-        // TODO
+        RuleFor(x => x.Codigo).NotEmpty().MaximumLength(BaseEntity.TamanhoMaximoCodigo);
+        RuleFor(x => x.Nome).NotEmpty().MaximumLength(Unidade.TamanhoMaximoNome);
     }
 }
 
-// TODO: AtualizarUsuarioValidator (senha, QUANDO informada, com tamanho mínimo),
-//       AtualizarColaboradorValidator, AtualizarUnidadeValidator, LoginValidator.
+public class AtualizarUnidadeValidator : AbstractValidator<AtualizarUnidadeDto>
+{
+    public AtualizarUnidadeValidator()
+    {
+        RuleFor(x => x.Nome).NotEmpty().MaximumLength(Unidade.TamanhoMaximoNome);
+    }
+}
+
+public class CriarColaboradorValidator : AbstractValidator<CriarColaboradorDto>
+{
+    public CriarColaboradorValidator()
+    {
+        RuleFor(x => x.Codigo).NotEmpty().MaximumLength(BaseEntity.TamanhoMaximoCodigo);
+        RuleFor(x => x.Nome).NotEmpty().MaximumLength(Colaborador.TamanhoMaximoNome);
+        RuleFor(x => x.CodigoUnidade).NotEmpty().MaximumLength(BaseEntity.TamanhoMaximoCodigo);
+        RuleFor(x => x.CodigoUsuario).NotEmpty().MaximumLength(BaseEntity.TamanhoMaximoCodigo);
+    }
+}
+
+public class AtualizarColaboradorValidator : AbstractValidator<AtualizarColaboradorDto>
+{
+    public AtualizarColaboradorValidator()
+    {
+        RuleFor(x => x.Nome).NotEmpty().MaximumLength(Colaborador.TamanhoMaximoNome);
+        RuleFor(x => x.CodigoUnidade).NotEmpty().MaximumLength(BaseEntity.TamanhoMaximoCodigo);
+    }
+}
+
+public class LoginValidator : AbstractValidator<LoginDto>
+{
+    public LoginValidator()
+    {
+        RuleFor(x => x.Login).NotEmpty();
+        RuleFor(x => x.Senha).NotEmpty();
+    }
+}
