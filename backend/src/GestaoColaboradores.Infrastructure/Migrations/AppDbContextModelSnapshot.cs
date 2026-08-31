@@ -22,13 +22,16 @@ namespace GestaoColaboradores.Infrastructure.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.HasSequence("seq_codigo_colaborador");
+
+            modelBuilder.HasSequence("seq_codigo_unidade");
+
+            modelBuilder.HasSequence("seq_codigo_usuario");
+
             modelBuilder.Entity("GestaoColaboradores.Domain.Entidades.Colaborador", b =>
                 {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime?>("AtualizadoEm")
                         .HasColumnType("timestamp with time zone");
@@ -46,11 +49,11 @@ namespace GestaoColaboradores.Infrastructure.Migrations
                         .HasMaxLength(150)
                         .HasColumnType("character varying(150)");
 
-                    b.Property<int>("UnidadeId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("UnidadeId")
+                        .HasColumnType("uuid");
 
-                    b.Property<int>("UsuarioId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("UsuarioId")
+                        .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
@@ -67,11 +70,8 @@ namespace GestaoColaboradores.Infrastructure.Migrations
 
             modelBuilder.Entity("GestaoColaboradores.Domain.Entidades.Unidade", b =>
                 {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
 
                     b.Property<bool>("Ativo")
                         .HasColumnType("boolean");
@@ -102,11 +102,8 @@ namespace GestaoColaboradores.Infrastructure.Migrations
 
             modelBuilder.Entity("GestaoColaboradores.Domain.Entidades.Usuario", b =>
                 {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
 
                     b.Property<bool>("Ativo")
                         .HasColumnType("boolean");

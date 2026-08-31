@@ -7,11 +7,26 @@ namespace GestaoColaboradores.IntegrationTests;
 
 /// <summary>
 /// Fluxos ponta a ponta: HTTP real, pipeline completo de autenticação e validação,
-/// e PostgreSQL de verdade — inclusive os índices únicos, que o InMemory não teria.
-/// Os testes compartilham o banco semeado, então cada um usa códigos próprios.
+/// e PostgreSQL de verdade — inclusive os índices únicos e as sequences de código, que o
+/// InMemory provider não teria. Os testes compartilham o banco semeado, então cada um cria
+/// os próprios registros e resolve os Ids por consulta, sem depender de valores fixos.
 /// </summary>
 public class FluxosTests(ApiFactory factory) : IClassFixture<ApiFactory>
 {
+    private static async Task<UnidadeComColaboradoresDto> UnidadeDoSeedAsync(HttpClient client, bool ativa)
+    {
+        var unidades = await client.GetFromJsonAsync<List<UnidadeComColaboradoresDto>>("/api/v1/unidades");
+        return unidades!.First(u => u.Ativo == ativa);
+    }
+
+    private static async Task<UsuarioRespostaDto> CriarUsuarioAsync(HttpClient client, string login)
+    {
+        var resposta = await client.PostAsJsonAsync("/api/v1/usuarios",
+            new CriarUsuarioDto(login, "senha123", true));
+        resposta.EnsureSuccessStatusCode();
+        return (await resposta.Content.ReadFromJsonAsync<UsuarioRespostaDto>())!;
+    }
+
     // --- Autenticação --------------------------------------------------------------
 
     [Fact]
@@ -58,6 +73,41 @@ public class FluxosTests(ApiFactory factory) : IClassFixture<ApiFactory>
         Assert.Equal(HttpStatusCode.Unauthorized, resposta.StatusCode);
     }
 
+    // --- Códigos gerados pelo sistema ------------------------------------------------
+
+    /// <summary>O código não é entrada do cliente: o sistema numera no formato do prefixo.</summary>
+    [Fact]
+    public async Task Criar_GeraOCodigoNoFormatoDoSistema()
+    {
+        var client = await factory.CriarClienteAutenticadoAsync();
+
+        var usuario = await CriarUsuarioAsync(client, "codigo.gerado");
+
+        Assert.Matches(@"^USR\d{6}$", usuario.Codigo);
+    }
+
+    /// <summary>Duas criações seguidas nunca recebem o mesmo número — é o papel da sequence.</summary>
+    [Fact]
+    public async Task Criar_EmSequencia_NuncaRepeteOCodigo()
+    {
+        var client = await factory.CriarClienteAutenticadoAsync();
+
+        var primeiro = await CriarUsuarioAsync(client, "sequencia.um");
+        var segundo = await CriarUsuarioAsync(client, "sequencia.dois");
+
+        Assert.NotEqual(primeiro.Codigo, segundo.Codigo);
+    }
+
+    [Fact]
+    public async Task Criar_AtribuiIdentificadorUnicoNaoSequencial()
+    {
+        var client = await factory.CriarClienteAutenticadoAsync();
+
+        var usuario = await CriarUsuarioAsync(client, "identificador.uuid");
+
+        Assert.NotEqual(Guid.Empty, usuario.Id);
+    }
+
     // --- Seed e listagens ----------------------------------------------------------
 
     /// <summary>Requisito: listar unidades COM os colaboradores relacionados.</summary>
@@ -66,10 +116,10 @@ public class FluxosTests(ApiFactory factory) : IClassFixture<ApiFactory>
     {
         var client = await factory.CriarClienteAutenticadoAsync();
 
-        var unidades = await client.GetFromJsonAsync<List<UnidadeComColaboradoresDto>>("/api/v1/unidades");
+        var matriz = await UnidadeDoSeedAsync(client, ativa: true);
 
-        var matriz = Assert.Single(unidades!, u => u.Codigo == "UNI-001");
         Assert.NotEmpty(matriz.Colaboradores);
+        Assert.All(matriz.Colaboradores, c => Assert.Equal(matriz.Id, c.UnidadeId));
     }
 
     /// <summary>Inativar não desvincula quem já estava na unidade.</summary>
@@ -78,9 +128,8 @@ public class FluxosTests(ApiFactory factory) : IClassFixture<ApiFactory>
     {
         var client = await factory.CriarClienteAutenticadoAsync();
 
-        var unidades = await client.GetFromJsonAsync<List<UnidadeComColaboradoresDto>>("/api/v1/unidades");
+        var filial = await UnidadeDoSeedAsync(client, ativa: false);
 
-        var filial = Assert.Single(unidades!, u => u.Codigo == "UNI-002");
         Assert.False(filial.Ativo);
         Assert.NotEmpty(filial.Colaboradores);
     }
@@ -115,24 +164,23 @@ public class FluxosTests(ApiFactory factory) : IClassFixture<ApiFactory>
     {
         var client = await factory.CriarClienteAutenticadoAsync();
 
-        var respostaUnidade = await client.PostAsJsonAsync("/api/v1/unidades",
-            new CriarUnidadeDto("UNI-F01", "Filial do Fluxo"));
+        var respostaUnidade = await client.PostAsJsonAsync("/api/v1/unidades", new CriarUnidadeDto("Filial do Fluxo"));
         Assert.Equal(HttpStatusCode.Created, respostaUnidade.StatusCode);
         Assert.NotNull(respostaUnidade.Headers.Location);
+        var unidade = (await respostaUnidade.Content.ReadFromJsonAsync<UnidadeRespostaDto>())!;
 
-        var respostaUsuario = await client.PostAsJsonAsync("/api/v1/usuarios",
-            new CriarUsuarioDto("USR-F01", "fluxo.teste", "senha123", true));
-        Assert.Equal(HttpStatusCode.Created, respostaUsuario.StatusCode);
+        var usuario = await CriarUsuarioAsync(client, "fluxo.teste");
 
         var respostaColaborador = await client.PostAsJsonAsync("/api/v1/colaboradores",
-            new CriarColaboradorDto("COL-F01", "Colaborador do Fluxo", "UNI-F01", "USR-F01"));
+            new CriarColaboradorDto("Colaborador do Fluxo", unidade.Id, usuario.Id));
         Assert.Equal(HttpStatusCode.Created, respostaColaborador.StatusCode);
 
         // O Location precisa apontar para o próprio recurso, não para a coleção.
         var criado = await client.GetFromJsonAsync<ColaboradorRespostaDto>(
             respostaColaborador.Headers.Location!.PathAndQuery);
-        Assert.Equal("COL-F01", criado!.Codigo);
-        Assert.Equal("UNI-F01", criado.CodigoUnidade);
+        Assert.Equal("Colaborador do Fluxo", criado!.Nome);
+        Assert.Equal(unidade.Id, criado.UnidadeId);
+        Assert.Matches(@"^COL\d{6}$", criado.Codigo);
     }
 
     // --- Regras de negócio ----------------------------------------------------------
@@ -142,12 +190,11 @@ public class FluxosTests(ApiFactory factory) : IClassFixture<ApiFactory>
     public async Task CriarColaborador_EmUnidadeInativa_Responde422()
     {
         var client = await factory.CriarClienteAutenticadoAsync();
-
-        await client.PostAsJsonAsync("/api/v1/usuarios",
-            new CriarUsuarioDto("USR-F02", "usuario.422", "senha123", true));
+        var filial = await UnidadeDoSeedAsync(client, ativa: false);
+        var usuario = await CriarUsuarioAsync(client, "usuario.422");
 
         var resposta = await client.PostAsJsonAsync("/api/v1/colaboradores",
-            new CriarColaboradorDto("COL-F02", "Deve Falhar", "UNI-002", "USR-F02"));
+            new CriarColaboradorDto("Deve Falhar", filial.Id, usuario.Id));
 
         Assert.Equal(HttpStatusCode.UnprocessableEntity, resposta.StatusCode);
         var corpo = await resposta.Content.ReadAsStringAsync();
@@ -156,25 +203,26 @@ public class FluxosTests(ApiFactory factory) : IClassFixture<ApiFactory>
 
     /// <summary>Só o índice único do banco garante isso — por isso o teste usa Postgres real.</summary>
     [Fact]
-    public async Task CriarUsuario_ComCodigoDuplicado_Responde409()
-    {
-        var client = await factory.CriarClienteAutenticadoAsync();
-
-        var resposta = await client.PostAsJsonAsync("/api/v1/usuarios",
-            new CriarUsuarioDto("USR-001", "outro.login", "senha123", true));
-
-        Assert.Equal(HttpStatusCode.Conflict, resposta.StatusCode);
-    }
-
-    [Fact]
     public async Task CriarUsuario_ComLoginDuplicado_Responde409()
     {
         var client = await factory.CriarClienteAutenticadoAsync();
 
         var resposta = await client.PostAsJsonAsync("/api/v1/usuarios",
-            new CriarUsuarioDto("USR-F03", "admin", "senha123", true));
+            new CriarUsuarioDto("admin", "senha123", true));
 
         Assert.Equal(HttpStatusCode.Conflict, resposta.StatusCode);
+    }
+
+    [Fact]
+    public async Task CriarColaborador_ComUnidadeInexistente_Responde404()
+    {
+        var client = await factory.CriarClienteAutenticadoAsync();
+        var usuario = await CriarUsuarioAsync(client, "sem.unidade");
+
+        var resposta = await client.PostAsJsonAsync("/api/v1/colaboradores",
+            new CriarColaboradorDto("Sem Unidade", Guid.CreateVersion7(), usuario.Id));
+
+        Assert.Equal(HttpStatusCode.NotFound, resposta.StatusCode);
     }
 
     // --- Validação e verbos ---------------------------------------------------------
@@ -185,7 +233,7 @@ public class FluxosTests(ApiFactory factory) : IClassFixture<ApiFactory>
         var client = await factory.CriarClienteAutenticadoAsync();
 
         var resposta = await client.PostAsJsonAsync("/api/v1/usuarios",
-            new CriarUsuarioDto("USR-F04", "senha.curta", "123", true));
+            new CriarUsuarioDto("senha.curta", "123", true));
 
         Assert.Equal(HttpStatusCode.BadRequest, resposta.StatusCode);
     }
@@ -195,7 +243,7 @@ public class FluxosTests(ApiFactory factory) : IClassFixture<ApiFactory>
     {
         var client = await factory.CriarClienteAutenticadoAsync();
 
-        var resposta = await client.GetAsync("/api/v1/usuarios/999999");
+        var resposta = await client.GetAsync($"/api/v1/usuarios/{Guid.CreateVersion7()}");
 
         Assert.Equal(HttpStatusCode.NotFound, resposta.StatusCode);
     }
@@ -206,11 +254,10 @@ public class FluxosTests(ApiFactory factory) : IClassFixture<ApiFactory>
     {
         var client = await factory.CriarClienteAutenticadoAsync();
 
-        var criada = await client.PostAsJsonAsync("/api/v1/unidades",
-            new CriarUnidadeDto("UNI-F02", "Filial dos Verbos"));
-        var unidade = await criada.Content.ReadFromJsonAsync<UnidadeRespostaDto>();
+        var criada = await client.PostAsJsonAsync("/api/v1/unidades", new CriarUnidadeDto("Filial dos Verbos"));
+        var unidade = (await criada.Content.ReadFromJsonAsync<UnidadeRespostaDto>())!;
 
-        var put = await client.PutAsJsonAsync($"/api/v1/unidades/{unidade!.Id}", new { ativo = false });
+        var put = await client.PutAsJsonAsync($"/api/v1/unidades/{unidade.Id}", new { ativo = false });
         Assert.Equal(HttpStatusCode.BadRequest, put.StatusCode);
 
         var patch = await client.PatchAsJsonAsync($"/api/v1/unidades/{unidade.Id}", new { ativo = false });
@@ -225,8 +272,9 @@ public class FluxosTests(ApiFactory factory) : IClassFixture<ApiFactory>
     public async Task Patch_SemNenhumCampo_Responde400()
     {
         var client = await factory.CriarClienteAutenticadoAsync();
+        var usuario = await CriarUsuarioAsync(client, "patch.vazio");
 
-        var resposta = await client.PatchAsJsonAsync("/api/v1/usuarios/1", new { });
+        var resposta = await client.PatchAsJsonAsync($"/api/v1/usuarios/{usuario.Id}", new { });
 
         Assert.Equal(HttpStatusCode.BadRequest, resposta.StatusCode);
     }
@@ -237,19 +285,18 @@ public class FluxosTests(ApiFactory factory) : IClassFixture<ApiFactory>
     {
         var client = await factory.CriarClienteAutenticadoAsync();
 
-        await client.PostAsJsonAsync("/api/v1/unidades", new CriarUnidadeDto("UNI-F03", "Filial da Remoção"));
-        var respostaUsuario = await client.PostAsJsonAsync("/api/v1/usuarios",
-            new CriarUsuarioDto("USR-F05", "sera.removido", "senha123", true));
-        var usuario = await respostaUsuario.Content.ReadFromJsonAsync<UsuarioRespostaDto>();
+        var criada = await client.PostAsJsonAsync("/api/v1/unidades", new CriarUnidadeDto("Filial da Remoção"));
+        var unidade = (await criada.Content.ReadFromJsonAsync<UnidadeRespostaDto>())!;
+        var usuario = await CriarUsuarioAsync(client, "sera.removido");
 
         var respostaColaborador = await client.PostAsJsonAsync("/api/v1/colaboradores",
-            new CriarColaboradorDto("COL-F03", "Será Removido", "UNI-F03", "USR-F05"));
-        var colaborador = await respostaColaborador.Content.ReadFromJsonAsync<ColaboradorRespostaDto>();
+            new CriarColaboradorDto("Será Removido", unidade.Id, usuario.Id));
+        var colaborador = (await respostaColaborador.Content.ReadFromJsonAsync<ColaboradorRespostaDto>())!;
 
-        var remocao = await client.DeleteAsync($"/api/v1/colaboradores/{colaborador!.Id}");
+        var remocao = await client.DeleteAsync($"/api/v1/colaboradores/{colaborador.Id}");
         Assert.Equal(HttpStatusCode.NoContent, remocao.StatusCode);
 
-        var usuarioDepois = await client.GetFromJsonAsync<UsuarioRespostaDto>($"/api/v1/usuarios/{usuario!.Id}");
+        var usuarioDepois = await client.GetFromJsonAsync<UsuarioRespostaDto>($"/api/v1/usuarios/{usuario.Id}");
         Assert.False(usuarioDepois!.Ativo);
 
         var colaboradorDepois = await client.GetAsync($"/api/v1/colaboradores/{colaborador.Id}");

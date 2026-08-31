@@ -1,10 +1,16 @@
 namespace GestaoColaboradores.Application.Dtos;
 
-public record UnidadeRespostaDto(int Id, string Codigo, string Nome, bool Ativo);
+public record UnidadeRespostaDto(Guid Id, string Codigo, string Nome, bool Ativo);
 
-public record UnidadeComColaboradoresDto(int Id, string Codigo, string Nome, bool Ativo, List<ColaboradorRespostaDto> Colaboradores);
+public record UnidadeComColaboradoresDto(
+    Guid Id,
+    string Codigo,
+    string Nome,
+    bool Ativo,
+    List<ColaboradorRespostaDto> Colaboradores);
 
-public record CriarUnidadeDto(string Codigo, string Nome);
+/// <summary>O código não é informado: o sistema o gera no formato UNI000001.</summary>
+public record CriarUnidadeDto(string Nome);
 
 public record AtualizarUnidadeDto(string Nome, bool Ativo);
 

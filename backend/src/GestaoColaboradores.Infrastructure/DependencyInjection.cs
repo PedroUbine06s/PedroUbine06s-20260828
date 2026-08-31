@@ -19,6 +19,7 @@ public static class DependencyInjection
         services.AddScoped<IColaboradorRepository, ColaboradorRepository>();
         services.AddScoped<IUnidadeRepository, UnidadeRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
+        services.AddScoped<IGeradorCodigo, GeradorCodigo>();
 
         services.AddSingleton<IPasswordHasher, BCryptPasswordHasher>(); // Strategy
         services.Configure<JwtSettings>(configuration.GetSection(JwtSettings.Secao)); // Options

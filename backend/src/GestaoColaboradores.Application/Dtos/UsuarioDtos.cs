@@ -3,10 +3,10 @@ using GestaoColaboradores.Application.Common;
 namespace GestaoColaboradores.Application.Dtos;
 
 // A senha NUNCA aparece em DTO de resposta — nem o hash.
-public record UsuarioRespostaDto(int Id, string Codigo, string Login, bool Ativo);
+public record UsuarioRespostaDto(Guid Id, string Codigo, string Login, bool Ativo);
 
+/// <summary>O código não é informado: o sistema o gera no formato USR000001.</summary>
 public record CriarUsuarioDto(
-    string Codigo,
     string Login,
     [property: NaoNormalizar] string Senha,
     bool Ativo);

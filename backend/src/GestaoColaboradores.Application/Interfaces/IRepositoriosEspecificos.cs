@@ -18,7 +18,7 @@ public interface IColaboradorRepository : IRepository<Colaborador>
     /// Busca rastreada já com a unidade carregada. Necessária quando a atualização pode não
     /// tocar na unidade: sem o Include, montar o DTO de resposta acessaria uma referência nula.
     /// </summary>
-    Task<Colaborador?> ObterComUnidadeAsync(int id, CancellationToken ct = default);
+    Task<Colaborador?> ObterComUnidadeAsync(Guid id, CancellationToken ct = default);
 }
 
 public interface IUnidadeRepository : IRepository<Unidade>
@@ -27,5 +27,5 @@ public interface IUnidadeRepository : IRepository<Unidade>
     Task<List<Unidade>> ListarComColaboradoresAsync(CancellationToken ct = default);
 
     /// <summary>Uma unidade com seus colaboradores, para o endpoint de detalhe.</summary>
-    Task<Unidade?> ObterComColaboradoresAsync(int id, CancellationToken ct = default);
+    Task<Unidade?> ObterComColaboradoresAsync(Guid id, CancellationToken ct = default);
 }

@@ -17,11 +17,10 @@ public class NormalizacaoTests
     [Fact]
     public void Desserializacao_DeveCortarEspacosDosCamposComuns()
     {
-        var json = """{"codigo":"  USR-001  ","login":"  admin  ","senha":"segredo","ativo":true}""";
+        var json = """{"login":"  admin  ","senha":"segredo","ativo":true}""";
 
         var dto = JsonSerializer.Deserialize<CriarUsuarioDto>(json, Opcoes)!;
 
-        Assert.Equal("USR-001", dto.Codigo);
         Assert.Equal("admin", dto.Login);
     }
 

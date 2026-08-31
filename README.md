@@ -19,12 +19,13 @@ escolhidos para que cada requisito seja testável sem preparo:
 
 | Dado | Situação | Serve para testar |
 |------|----------|-------------------|
-| `UNI-001` Matriz | ativa, 2 colaboradores | cadastro normal de colaborador |
-| `UNI-002` Filial Centro | **inativa**, 1 colaborador | **422** ao tentar incluir novo colaborador, e que inativar não desvincula quem já estava |
-| `USR-001` admin | ativo | login (`admin` / `admin123`) |
-| `USR-005` carlos.lima | **inativo** | filtro `GET /usuarios?ativo=false` e recusa de login |
+| Unidade **Matriz** | ativa, 2 colaboradores | cadastro normal de colaborador |
+| Unidade **Filial Centro** | **inativa**, 1 colaborador | **422** ao tentar incluir novo colaborador, e que inativar não desvincula quem já estava |
+| Usuário **admin** | ativo | login (`admin` / `admin123`) |
+| Usuário **carlos.lima** | **inativo** | filtro `GET /usuarios?ativo=false` e recusa de login |
 
-Os demais usuários usam a senha `senha123`.
+Os demais usuários usam a senha `senha123`. Os códigos (`USR000001`, `UNI000001`,
+`COL000001`) são gerados pelo sistema — liste os recursos para descobrir os Ids.
 
 ## Arquitetura
 
@@ -69,6 +70,17 @@ concorrência entre requisições simultâneas é resolvida pelo índice único,
   credencial válida sem dono. Inativar encerra o acesso preservando o rastro. As duas
   alterações acontecem no mesmo commit, então ou ambas valem ou nenhuma vale.
 - **Senhas:** BCrypt; hash jamais exposto em resposta.
+- **Identificador é UUID v7, gerado no domínio** — a versão 7 é ordenada no tempo, então
+  preserva a localidade do índice que um UUID v4 destruiria com inserções espalhadas. Gerar
+  na entidade, e não no banco, faz o objeto nascer com identidade: dá para montar o grafo
+  inteiro e gravar num commit só, sem salvar o principal antes de vincular o dependente.
+- **Código de negócio gerado pelo sistema, via sequence** — `USR000001`, `UNI000001`,
+  `COL000001` deixaram de ser entrada do cliente. A numeração usa sequences do PostgreSQL
+  porque `nextval` é atômico: duas requisições simultâneas nunca recebem o mesmo número.
+  Um "maior valor + 1" na aplicação teria corrida entre a leitura e a gravação.
+- **Referências por Id, não por código** — como o código passou a ser saída do sistema,
+  exigir que o cliente o reenviasse como entrada seria inverter o fluxo. O Id é o
+  identificador canônico: é o que volta no `Location` e nas listagens.
 - **Limites de tamanho em constante única** — `BaseEntity.TamanhoMaximoCodigo` e afins são
   lidos tanto pela validação do domínio quanto pelo `HasMaxLength` do schema, de modo que o
   domínio não tem como aceitar um valor que a coluna rejeitaria.
@@ -129,13 +141,13 @@ cd backend
 dotnet test
 ```
 
-**80 testes**, divididos em duas suítes com propósitos distintos.
+**81 testes**, divididos em duas suítes com propósitos distintos.
 
-Os **63 de unidade** (xUnit + NSubstitute) rodam em ~100 ms e cobrem o domínio sem mock algum
+Os **61 de unidade** (xUnit + NSubstitute) rodam em ~100 ms e cobrem o domínio sem mock algum
 e os serviços com repositórios simulados. Eles verificam efeito, não só retorno: quando uma
 regra falha, o teste assere que `CommitAsync` **não** foi chamado.
 
-Os **17 de integração** (`WebApplicationFactory` + **Testcontainers**) sobem um PostgreSQL real
+Os **20 de integração** (`WebApplicationFactory` + **Testcontainers**) sobem um PostgreSQL real
 em contêiner e exercitam HTTP de ponta a ponta — pipeline de autenticação, validação, migrations
 e seed inclusos. Não se usa InMemory provider aqui de propósito: ele não tem índice único, e é
 justamente o índice que garante a unicidade de código e login.
@@ -143,7 +155,8 @@ justamente o índice que garante a unicidade de código e login.
 Alguns que valem destaque: o login devolve mensagem **indistinguível** entre usuário inexistente
 e senha errada (contra enumeração de usuários); a resposta de usuários **nunca** contém a palavra
 "senha" nem "hash"; inativar unidade não desvincula quem já estava; remover colaborador inativa o
-usuário na mesma transação; e o `PUT` recusa corpo incompleto enquanto o `PATCH` aceita.
+usuário na mesma transação; o `PUT` recusa corpo incompleto enquanto o `PATCH` aceita; e duas criações seguidas nunca
+recebem o mesmo código, o que cobra o comportamento da sequence.
 
 ## Desenvolvimento local
 

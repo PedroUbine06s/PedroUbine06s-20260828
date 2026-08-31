@@ -5,7 +5,7 @@ namespace GestaoColaboradores.Application.Interfaces;
 /// <summary>Repository genérico — herança restrita a entidades do domínio via constraint.</summary>
 public interface IRepository<T> where T : BaseEntity
 {
-    Task<T?> ObterPorIdAsync(int id, CancellationToken ct = default);
+    Task<T?> ObterPorIdAsync(Guid id, CancellationToken ct = default);
     Task<T?> ObterPorCodigoAsync(string codigo, CancellationToken ct = default);
     Task<List<T>> ListarAsync(CancellationToken ct = default);
     Task AdicionarAsync(T entidade, CancellationToken ct = default);

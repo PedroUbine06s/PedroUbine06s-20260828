@@ -7,10 +7,10 @@ namespace GestaoColaboradores.Application.Services;
 
 public interface IUsuarioService
 {
-    Task<Result<UsuarioRespostaDto>> ObterPorIdAsync(int id, CancellationToken ct = default);
+    Task<Result<UsuarioRespostaDto>> ObterPorIdAsync(Guid id, CancellationToken ct = default);
     Task<Result<UsuarioRespostaDto>> CriarAsync(CriarUsuarioDto dto, CancellationToken ct = default);
-    Task<Result<UsuarioRespostaDto>> AtualizarAsync(int id, AtualizarUsuarioDto dto, CancellationToken ct = default);
-    Task<Result<UsuarioRespostaDto>> AtualizarParcialAsync(int id, AtualizarParcialUsuarioDto dto, CancellationToken ct = default);
+    Task<Result<UsuarioRespostaDto>> AtualizarAsync(Guid id, AtualizarUsuarioDto dto, CancellationToken ct = default);
+    Task<Result<UsuarioRespostaDto>> AtualizarParcialAsync(Guid id, AtualizarParcialUsuarioDto dto, CancellationToken ct = default);
     /// <param name="ativo">null = todos; true/false = filtro por status (requisito do enunciado).</param>
     Task<Result<List<UsuarioRespostaDto>>> ListarAsync(bool? ativo, CancellationToken ct = default);
 }
@@ -18,9 +18,10 @@ public interface IUsuarioService
 public class UsuarioService(
     IUsuarioRepository usuarioRepo,
     IPasswordHasher hasher,          // Strategy: nunca armazene a senha em texto plano
+    IGeradorCodigo gerador,
     IUnitOfWork uow) : IUsuarioService
 {
-    public async Task<Result<UsuarioRespostaDto>> ObterPorIdAsync(int id, CancellationToken ct = default)
+    public async Task<Result<UsuarioRespostaDto>> ObterPorIdAsync(Guid id, CancellationToken ct = default)
     {
         var usuario = await usuarioRepo.ObterPorIdAsync(id, ct);
 
@@ -31,12 +32,14 @@ public class UsuarioService(
 
     public async Task<Result<UsuarioRespostaDto>> CriarAsync(CriarUsuarioDto dto, CancellationToken ct = default)
     {
-        if (await usuarioRepo.ExisteCodigoAsync(dto.Codigo, ct))
-            return Result<UsuarioRespostaDto>.Falha($"Já existe um usuário com o código '{dto.Codigo}'", TipoErro.Conflito);
+        // O código não é mais conflitável: quem numera é o sistema. Sobra o login, que
+        // continua vindo do cliente e precisa ser único.
         if (await usuarioRepo.ExisteLoginAsync(dto.Login, ct))
-            return Result<UsuarioRespostaDto>.Falha($"Já existe um usuário com o login '{dto.Login}'", TipoErro.Conflito);
+            return Result<UsuarioRespostaDto>.Falha(
+                $"Já existe um usuário com o login '{dto.Login}'.", TipoErro.Conflito);
 
-        var usuario = Usuario.Criar(dto.Codigo, dto.Login, hasher.Hash(dto.Senha));
+        var codigo = await gerador.GerarAsync(TipoCodigo.Usuario, ct);
+        var usuario = Usuario.Criar(codigo, dto.Login, hasher.Hash(dto.Senha));
 
         if (!dto.Ativo) usuario.Inativar();
 
@@ -46,7 +49,7 @@ public class UsuarioService(
         return Result<UsuarioRespostaDto>.Sucesso(ParaDto(usuario));
     }
 
-    public async Task<Result<UsuarioRespostaDto>> AtualizarAsync(int id, AtualizarUsuarioDto dto, CancellationToken ct = default)
+    public async Task<Result<UsuarioRespostaDto>> AtualizarAsync(Guid id, AtualizarUsuarioDto dto, CancellationToken ct = default)
     {
         var usuario = await usuarioRepo.ObterPorIdAsync(id, ct);
 
@@ -67,7 +70,7 @@ public class UsuarioService(
     }
 
     /// <summary>PATCH: aplica apenas os campos informados; os nulos ficam como estão.</summary>
-    public async Task<Result<UsuarioRespostaDto>> AtualizarParcialAsync(int id, AtualizarParcialUsuarioDto dto, CancellationToken ct = default)
+    public async Task<Result<UsuarioRespostaDto>> AtualizarParcialAsync(Guid id, AtualizarParcialUsuarioDto dto, CancellationToken ct = default)
     {
         var usuario = await usuarioRepo.ObterPorIdAsync(id, ct);
 

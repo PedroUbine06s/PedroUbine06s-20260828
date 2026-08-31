@@ -7,11 +7,11 @@ namespace GestaoColaboradores.Application.Services;
 
 public interface IColaboradorService
 {
-    Task<Result<ColaboradorRespostaDto>> ObterPorIdAsync(int id, CancellationToken ct = default);
+    Task<Result<ColaboradorRespostaDto>> ObterPorIdAsync(Guid id, CancellationToken ct = default);
     Task<Result<ColaboradorRespostaDto>> CriarAsync(CriarColaboradorDto dto, CancellationToken ct = default);
-    Task<Result<ColaboradorRespostaDto>> AtualizarAsync(int id, AtualizarColaboradorDto dto, CancellationToken ct = default);
-    Task<Result<ColaboradorRespostaDto>> AtualizarParcialAsync(int id, AtualizarParcialColaboradorDto dto, CancellationToken ct = default);
-    Task<Result> RemoverAsync(int id, CancellationToken ct = default);
+    Task<Result<ColaboradorRespostaDto>> AtualizarAsync(Guid id, AtualizarColaboradorDto dto, CancellationToken ct = default);
+    Task<Result<ColaboradorRespostaDto>> AtualizarParcialAsync(Guid id, AtualizarParcialColaboradorDto dto, CancellationToken ct = default);
+    Task<Result> RemoverAsync(Guid id, CancellationToken ct = default);
     Task<Result<List<ColaboradorRespostaDto>>> ListarAsync(CancellationToken ct = default);
 }
 
@@ -24,9 +24,10 @@ public class ColaboradorService(
     IColaboradorRepository colaboradorRepo,
     IUnidadeRepository unidadeRepo,
     IUsuarioRepository usuarioRepo,
+    IGeradorCodigo gerador,
     IUnitOfWork uow) : IColaboradorService
 {
-    public async Task<Result<ColaboradorRespostaDto>> ObterPorIdAsync(int id, CancellationToken ct = default)
+    public async Task<Result<ColaboradorRespostaDto>> ObterPorIdAsync(Guid id, CancellationToken ct = default)
     {
         var colaborador = await colaboradorRepo.ObterComUnidadeAsync(id, ct);
 
@@ -37,11 +38,7 @@ public class ColaboradorService(
 
     public async Task<Result<ColaboradorRespostaDto>> CriarAsync(CriarColaboradorDto dto, CancellationToken ct = default)
     {
-        if (await colaboradorRepo.ExisteCodigoAsync(dto.Codigo, ct))
-            return Result<ColaboradorRespostaDto>.Falha(
-                $"Já existe um colaborador com o código '{dto.Codigo}'.", TipoErro.Conflito);
-
-        var unidade = await unidadeRepo.ObterPorCodigoAsync(dto.CodigoUnidade, ct);
+        var unidade = await unidadeRepo.ObterPorIdAsync(dto.UnidadeId, ct);
         if (unidade is null)
             return Result<ColaboradorRespostaDto>.Falha("Unidade não encontrada.", TipoErro.NaoEncontrado);
 
@@ -49,11 +46,12 @@ public class ColaboradorService(
             return Result<ColaboradorRespostaDto>.Falha(
                 "Unidade inativa não permite inclusão de novos colaboradores.", TipoErro.RegraNegocio);
 
-        var usuario = await usuarioRepo.ObterPorCodigoAsync(dto.CodigoUsuario, ct);
+        var usuario = await usuarioRepo.ObterPorIdAsync(dto.UsuarioId, ct);
         if (usuario is null)
             return Result<ColaboradorRespostaDto>.Falha("Usuário não encontrado.", TipoErro.NaoEncontrado);
 
-        var colaborador = Colaborador.Criar(dto.Codigo, dto.Nome, unidade, usuario);
+        var codigo = await gerador.GerarAsync(TipoCodigo.Colaborador, ct);
+        var colaborador = Colaborador.Criar(codigo, dto.Nome, unidade, usuario);
 
         await colaboradorRepo.AdicionarAsync(colaborador, ct);
         await uow.CommitAsync(ct);
@@ -67,13 +65,13 @@ public class ColaboradorService(
         return Result<List<ColaboradorRespostaDto>>.Sucesso(colaboradores.Select(ParaDto).ToList());
     }
 
-    public async Task<Result<ColaboradorRespostaDto>> AtualizarAsync(int id, AtualizarColaboradorDto dto, CancellationToken ct = default)
+    public async Task<Result<ColaboradorRespostaDto>> AtualizarAsync(Guid id, AtualizarColaboradorDto dto, CancellationToken ct = default)
     {
         var colaborador = await colaboradorRepo.ObterPorIdAsync(id, ct);
         if (colaborador is null)
             return Result<ColaboradorRespostaDto>.Falha($"Colaborador {id} não encontrado.", TipoErro.NaoEncontrado);
 
-        var unidade = await unidadeRepo.ObterPorCodigoAsync(dto.CodigoUnidade, ct);
+        var unidade = await unidadeRepo.ObterPorIdAsync(dto.UnidadeId, ct);
         if (unidade is null)
             return Result<ColaboradorRespostaDto>.Falha("Unidade não encontrada.", TipoErro.NaoEncontrado);
 
@@ -92,7 +90,7 @@ public class ColaboradorService(
     }
 
     /// <summary>PATCH: renomear sem reenviar a unidade, ou transferir sem reenviar o nome.</summary>
-    public async Task<Result<ColaboradorRespostaDto>> AtualizarParcialAsync(int id, AtualizarParcialColaboradorDto dto, CancellationToken ct = default)
+    public async Task<Result<ColaboradorRespostaDto>> AtualizarParcialAsync(Guid id, AtualizarParcialColaboradorDto dto, CancellationToken ct = default)
     {
         var colaborador = await colaboradorRepo.ObterComUnidadeAsync(id, ct);
         if (colaborador is null)
@@ -100,9 +98,9 @@ public class ColaboradorService(
 
         Unidade? novaUnidade = null;
 
-        if (dto.CodigoUnidade is not null)
+        if (dto.UnidadeId is not null)
         {
-            novaUnidade = await unidadeRepo.ObterPorCodigoAsync(dto.CodigoUnidade, ct);
+            novaUnidade = await unidadeRepo.ObterPorIdAsync(dto.UnidadeId.Value, ct);
 
             if (novaUnidade is null)
                 return Result<ColaboradorRespostaDto>.Falha("Unidade não encontrada.", TipoErro.NaoEncontrado);
@@ -124,7 +122,7 @@ public class ColaboradorService(
         return Result<ColaboradorRespostaDto>.Sucesso(ParaDto(colaborador));
     }
 
-    public async Task<Result> RemoverAsync(int id, CancellationToken ct = default)
+    public async Task<Result> RemoverAsync(Guid id, CancellationToken ct = default)
     {
         var colaborador = await colaboradorRepo.ObterPorIdAsync(id, ct);
         if (colaborador is null)
@@ -143,5 +141,5 @@ public class ColaboradorService(
     }
 
     private static ColaboradorRespostaDto ParaDto(Colaborador c) =>
-        new(c.Id, c.Codigo, c.Nome, c.Unidade.Codigo, c.Unidade.Nome);
+        new(c.Id, c.Codigo, c.Nome, c.Unidade.Id, c.Unidade.Codigo, c.Unidade.Nome);
 }

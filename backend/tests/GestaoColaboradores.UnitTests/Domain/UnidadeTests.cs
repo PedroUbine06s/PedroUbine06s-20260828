@@ -12,7 +12,7 @@ public class UnidadeTests
     [Fact]
     public void UnidadeNasceAtiva()
     {
-        var unidade = Unidade.Criar("UNI-001", "Matriz");
+        var unidade = Unidade.Criar("UNI000001", "Matriz");
 
         Assert.True(unidade.Ativo);
         Assert.True(unidade.PodeReceberColaborador);
@@ -21,7 +21,7 @@ public class UnidadeTests
     [Fact]
     public void UnidadeInativa_NaoPodeReceberColaborador()
     {
-        var unidade = Unidade.Criar("UNI-001", "Filial Centro");
+        var unidade = Unidade.Criar("UNI000001", "Filial Centro");
 
         unidade.Inativar();
 
@@ -31,7 +31,7 @@ public class UnidadeTests
     [Fact]
     public void UnidadeReativada_VoltaAAceitarColaboradores()
     {
-        var unidade = Unidade.Criar("UNI-001", "Filial Centro");
+        var unidade = Unidade.Criar("UNI000001", "Filial Centro");
         unidade.Inativar();
 
         unidade.Ativar();
@@ -42,7 +42,7 @@ public class UnidadeTests
     [Fact]
     public void AlterarNome_CarimbaDataDeAtualizacao()
     {
-        var unidade = Unidade.Criar("UNI-001", "Matriz");
+        var unidade = Unidade.Criar("UNI000001", "Matriz");
         Assert.Null(unidade.AtualizadoEm);
 
         unidade.AlterarNome("Matriz Nova");
@@ -54,7 +54,7 @@ public class UnidadeTests
     [Fact]
     public void Inativar_CarimbaDataDeAtualizacao()
     {
-        var unidade = Unidade.Criar("UNI-001", "Matriz");
+        var unidade = Unidade.Criar("UNI000001", "Matriz");
 
         unidade.Inativar();
 
@@ -75,7 +75,7 @@ public class UnidadeTests
     {
         var nomeLongo = new string('a', Unidade.TamanhoMaximoNome + 1);
 
-        Assert.Throws<ArgumentException>(() => Unidade.Criar("UNI-001", nomeLongo));
+        Assert.Throws<ArgumentException>(() => Unidade.Criar("UNI000001", nomeLongo));
     }
 
     [Fact]

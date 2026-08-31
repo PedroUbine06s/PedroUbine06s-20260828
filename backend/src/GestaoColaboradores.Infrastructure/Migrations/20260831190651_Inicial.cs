@@ -1,6 +1,5 @@
 ﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
-using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
@@ -12,12 +11,20 @@ namespace GestaoColaboradores.Infrastructure.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.CreateSequence(
+                name: "seq_codigo_colaborador");
+
+            migrationBuilder.CreateSequence(
+                name: "seq_codigo_unidade");
+
+            migrationBuilder.CreateSequence(
+                name: "seq_codigo_usuario");
+
             migrationBuilder.CreateTable(
                 name: "unidades",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
                     Nome = table.Column<string>(type: "character varying(150)", maxLength: 150, nullable: false),
                     Codigo = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
                     CriadoEm = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
@@ -33,8 +40,7 @@ namespace GestaoColaboradores.Infrastructure.Migrations
                 name: "usuarios",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
                     Login = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
                     SenhaHash = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
                     Codigo = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
@@ -51,11 +57,10 @@ namespace GestaoColaboradores.Infrastructure.Migrations
                 name: "colaboradores",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
                     Nome = table.Column<string>(type: "character varying(150)", maxLength: 150, nullable: false),
-                    UnidadeId = table.Column<int>(type: "integer", nullable: false),
-                    UsuarioId = table.Column<int>(type: "integer", nullable: false),
+                    UnidadeId = table.Column<Guid>(type: "uuid", nullable: false),
+                    UsuarioId = table.Column<Guid>(type: "uuid", nullable: false),
                     Codigo = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
                     CriadoEm = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     AtualizadoEm = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
@@ -124,6 +129,15 @@ namespace GestaoColaboradores.Infrastructure.Migrations
 
             migrationBuilder.DropTable(
                 name: "usuarios");
+
+            migrationBuilder.DropSequence(
+                name: "seq_codigo_colaborador");
+
+            migrationBuilder.DropSequence(
+                name: "seq_codigo_unidade");
+
+            migrationBuilder.DropSequence(
+                name: "seq_codigo_usuario");
         }
     }
 }

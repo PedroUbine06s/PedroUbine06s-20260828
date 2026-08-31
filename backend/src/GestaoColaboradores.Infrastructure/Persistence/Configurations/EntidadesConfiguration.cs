@@ -17,6 +17,7 @@ public class UsuarioConfiguration : IEntityTypeConfiguration<Usuario>
     {
         builder.ToTable("usuarios");
         builder.HasKey(u => u.Id);
+        builder.Property(u => u.Id).ValueGeneratedNever();
         builder.Property(u => u.Codigo).HasMaxLength(BaseEntity.TamanhoMaximoCodigo).IsRequired();
         builder.HasIndex(u => u.Codigo).IsUnique();
         builder.Property(u => u.Login).HasMaxLength(Usuario.TamanhoMaximoLogin).IsRequired();
@@ -31,6 +32,7 @@ public class ColaboradorConfiguration : IEntityTypeConfiguration<Colaborador>
     {
         builder.ToTable("colaboradores");
         builder.HasKey(c => c.Id);
+        builder.Property(c => c.Id).ValueGeneratedNever();
         builder.Property(c => c.Codigo).HasMaxLength(BaseEntity.TamanhoMaximoCodigo).IsRequired();
         builder.HasIndex(c => c.Codigo).IsUnique();
         builder.Property(c => c.Nome).HasMaxLength(Colaborador.TamanhoMaximoNome).IsRequired();
@@ -53,6 +55,7 @@ public class UnidadeConfiguration : IEntityTypeConfiguration<Unidade>
     {
         builder.ToTable("unidades");
         builder.HasKey(u => u.Id);
+        builder.Property(u => u.Id).ValueGeneratedNever();
         builder.Property(u => u.Codigo).HasMaxLength(BaseEntity.TamanhoMaximoCodigo).IsRequired();
         builder.HasIndex(u => u.Codigo).IsUnique();
         builder.Property(u => u.Nome).HasMaxLength(Unidade.TamanhoMaximoNome).IsRequired();

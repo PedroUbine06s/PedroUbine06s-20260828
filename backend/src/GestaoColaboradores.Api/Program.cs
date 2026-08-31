@@ -83,9 +83,8 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     var hasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
-    await DbSeeder.SeedAsync(db, hasher);
-    // Pré-requisito: gerar a migration inicial uma única vez:
-    //   dotnet ef migrations add Inicial -p src/GestaoColaboradores.Infrastructure -s src/GestaoColaboradores.Api
+    var gerador = scope.ServiceProvider.GetRequiredService<IGeradorCodigo>();
+    await DbSeeder.SeedAsync(db, hasher, gerador);
 }
 
 app.UseMiddleware<ExcecaoMiddleware>(); // ProblemDetails para qualquer exceção não tratada

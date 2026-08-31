@@ -20,7 +20,7 @@ public class AuthServiceTests
 
     private AuthService CriarService() => new(_usuarioRepo, _hasher, _tokenService);
 
-    private static Usuario UsuarioAtivo() => Usuario.Criar("USR-001", "admin", "hash-armazenado");
+    private static Usuario UsuarioAtivo() => Usuario.Criar("USR000001", "admin", "hash-armazenado");
 
     private static Usuario UsuarioInativo()
     {

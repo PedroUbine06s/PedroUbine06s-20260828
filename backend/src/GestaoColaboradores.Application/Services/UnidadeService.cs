@@ -7,17 +7,20 @@ namespace GestaoColaboradores.Application.Services;
 
 public interface IUnidadeService
 {
-    Task<Result<UnidadeComColaboradoresDto>> ObterPorIdAsync(int id, CancellationToken ct = default);
+    Task<Result<UnidadeComColaboradoresDto>> ObterPorIdAsync(Guid id, CancellationToken ct = default);
     Task<Result<UnidadeRespostaDto>> CriarAsync(CriarUnidadeDto dto, CancellationToken ct = default);
-    Task<Result<UnidadeRespostaDto>> AtualizarAsync(int id, AtualizarUnidadeDto dto, CancellationToken ct = default);
-    Task<Result<UnidadeRespostaDto>> AtualizarParcialAsync(int id, AtualizarParcialUnidadeDto dto, CancellationToken ct = default);
+    Task<Result<UnidadeRespostaDto>> AtualizarAsync(Guid id, AtualizarUnidadeDto dto, CancellationToken ct = default);
+    Task<Result<UnidadeRespostaDto>> AtualizarParcialAsync(Guid id, AtualizarParcialUnidadeDto dto, CancellationToken ct = default);
     /// <summary>Requisito: listar unidades COM seus colaboradores.</summary>
     Task<Result<List<UnidadeComColaboradoresDto>>> ListarAsync(CancellationToken ct = default);
 }
 
-public class UnidadeService(IUnidadeRepository unidadeRepo, IUnitOfWork uow) : IUnidadeService
+public class UnidadeService(
+    IUnidadeRepository unidadeRepo,
+    IGeradorCodigo gerador,
+    IUnitOfWork uow) : IUnidadeService
 {
-    public async Task<Result<UnidadeComColaboradoresDto>> ObterPorIdAsync(int id, CancellationToken ct = default)
+    public async Task<Result<UnidadeComColaboradoresDto>> ObterPorIdAsync(Guid id, CancellationToken ct = default)
     {
         var unidade = await unidadeRepo.ObterComColaboradoresAsync(id, ct);
 
@@ -28,10 +31,8 @@ public class UnidadeService(IUnidadeRepository unidadeRepo, IUnitOfWork uow) : I
 
     public async Task<Result<UnidadeRespostaDto>> CriarAsync(CriarUnidadeDto dto, CancellationToken ct = default)
     {
-        if (await unidadeRepo.ExisteCodigoAsync(dto.Codigo, ct))
-            return Result<UnidadeRespostaDto>.Falha($"Já existe uma unidade com o código '{dto.Codigo}'.", TipoErro.Conflito);
-
-        var unidade = Unidade.Criar(dto.Codigo, dto.Nome);
+        var codigo = await gerador.GerarAsync(TipoCodigo.Unidade, ct);
+        var unidade = Unidade.Criar(codigo, dto.Nome);
 
         await unidadeRepo.AdicionarAsync(unidade, ct);
         await uow.CommitAsync(ct);
@@ -39,7 +40,7 @@ public class UnidadeService(IUnidadeRepository unidadeRepo, IUnitOfWork uow) : I
         return Result<UnidadeRespostaDto>.Sucesso(ParaDto(unidade));
     }
 
-    public async Task<Result<UnidadeRespostaDto>> AtualizarAsync(int id, AtualizarUnidadeDto dto, CancellationToken ct = default)
+    public async Task<Result<UnidadeRespostaDto>> AtualizarAsync(Guid id, AtualizarUnidadeDto dto, CancellationToken ct = default)
     {
         var unidade = await unidadeRepo.ObterPorIdAsync(id, ct);
 
@@ -62,7 +63,7 @@ public class UnidadeService(IUnidadeRepository unidadeRepo, IUnitOfWork uow) : I
     /// PATCH: aplica apenas os campos informados. É por aqui que se inativa uma unidade
     /// sem precisar reenviar o nome — o caso de uso mais comum do enunciado.
     /// </summary>
-    public async Task<Result<UnidadeRespostaDto>> AtualizarParcialAsync(int id, AtualizarParcialUnidadeDto dto, CancellationToken ct = default)
+    public async Task<Result<UnidadeRespostaDto>> AtualizarParcialAsync(Guid id, AtualizarParcialUnidadeDto dto, CancellationToken ct = default)
     {
         var unidade = await unidadeRepo.ObterPorIdAsync(id, ct);
 
@@ -101,6 +102,6 @@ public class UnidadeService(IUnidadeRepository unidadeRepo, IUnitOfWork uow) : I
     private static UnidadeComColaboradoresDto ParaDtoComColaboradores(Unidade u) =>
         new(u.Id, u.Codigo, u.Nome, u.Ativo,
             u.Colaboradores
-                .Select(c => new ColaboradorRespostaDto(c.Id, c.Codigo, c.Nome, u.Codigo, u.Nome))
+                .Select(c => new ColaboradorRespostaDto(c.Id, c.Codigo, c.Nome, u.Id, u.Codigo, u.Nome))
                 .ToList());
 }

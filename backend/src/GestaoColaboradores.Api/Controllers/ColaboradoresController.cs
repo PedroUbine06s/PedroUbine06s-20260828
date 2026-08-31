@@ -15,10 +15,10 @@ public class ColaboradoresController(IColaboradorService service) : ApiControlle
         DeResultado(await service.ListarAsync(ct));
 
     /// <summary>Retorna um colaborador pelo id.</summary>
-    [HttpGet("{id:int}")]
+    [HttpGet("{id:guid}")]
     [ProducesResponseType(typeof(ColaboradorRespostaDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult> ObterPorId(int id, CancellationToken ct) =>
+    public async Task<ActionResult> ObterPorId(Guid id, CancellationToken ct) =>
         DeResultado(await service.ObterPorIdAsync(id, ct));
 
     /// <summary>
@@ -39,27 +39,27 @@ public class ColaboradoresController(IColaboradorService service) : ApiControlle
     }
 
     /// <summary>Substitui nome e unidade. Exige os dois campos.</summary>
-    [HttpPut("{id:int}")]
+    [HttpPut("{id:guid}")]
     [ProducesResponseType(typeof(ColaboradorRespostaDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
-    public async Task<ActionResult> Atualizar(int id, AtualizarColaboradorDto dto, CancellationToken ct) =>
+    public async Task<ActionResult> Atualizar(Guid id, AtualizarColaboradorDto dto, CancellationToken ct) =>
         DeResultado(await service.AtualizarAsync(id, dto, ct));
 
     /// <summary>Atualização parcial: renomeia ou transfere, sem exigir os dois campos.</summary>
-    [HttpPatch("{id:int}")]
+    [HttpPatch("{id:guid}")]
     [ProducesResponseType(typeof(ColaboradorRespostaDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
-    public async Task<ActionResult> AtualizarParcial(int id, AtualizarParcialColaboradorDto dto, CancellationToken ct) =>
+    public async Task<ActionResult> AtualizarParcial(Guid id, AtualizarParcialColaboradorDto dto, CancellationToken ct) =>
         DeResultado(await service.AtualizarParcialAsync(id, dto, ct));
 
     /// <summary>Remove o colaborador e inativa o usuário vinculado, na mesma transação.</summary>
-    [HttpDelete("{id:int}")]
+    [HttpDelete("{id:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult> Remover(int id, CancellationToken ct) =>
+    public async Task<ActionResult> Remover(Guid id, CancellationToken ct) =>
         DeResultado(await service.RemoverAsync(id, ct));
 }

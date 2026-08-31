@@ -8,10 +8,10 @@ public class Colaborador : BaseEntity
 
     public string Nome { get; private set; } = string.Empty;
 
-    public int UnidadeId { get; private set; }
+    public Guid UnidadeId { get; private set; }
     public Unidade Unidade { get; private set; } = null!;
 
-    public int UsuarioId { get; private set; }
+    public Guid UsuarioId { get; private set; }
     public Usuario Usuario { get; private set; } = null!;
 
     private Colaborador() { } // EF Core

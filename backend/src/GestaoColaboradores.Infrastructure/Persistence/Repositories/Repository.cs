@@ -13,7 +13,7 @@ public class Repository<T>(AppDbContext context) : IRepository<T> where T : Base
     protected readonly AppDbContext Context = context;
     protected readonly DbSet<T> Set = context.Set<T>();
 
-    public virtual Task<T?> ObterPorIdAsync(int id, CancellationToken ct = default) =>
+    public virtual Task<T?> ObterPorIdAsync(Guid id, CancellationToken ct = default) =>
         Set.FirstOrDefaultAsync(e => e.Id == id, ct);
 
     public virtual Task<T?> ObterPorCodigoAsync(string codigo, CancellationToken ct = default) =>

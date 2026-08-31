@@ -15,13 +15,13 @@ public class UsuariosController(IUsuarioService service) : ApiControllerBase
         DeResultado(await service.ListarAsync(ativo, ct));
 
     /// <summary>Retorna um usuário pelo id.</summary>
-    [HttpGet("{id:int}")]
+    [HttpGet("{id:guid}")]
     [ProducesResponseType(typeof(UsuarioRespostaDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult> ObterPorId(int id, CancellationToken ct) =>
+    public async Task<ActionResult> ObterPorId(Guid id, CancellationToken ct) =>
         DeResultado(await service.ObterPorIdAsync(id, ct));
 
-    /// <summary>Cadastra um usuário. O código e o login precisam ser únicos.</summary>
+    /// <summary>Cadastra um usuário. O código é gerado pelo sistema; o login deve ser único.</summary>
     [HttpPost]
     [ProducesResponseType(typeof(UsuarioRespostaDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -34,18 +34,18 @@ public class UsuariosController(IUsuarioService service) : ApiControllerBase
     }
 
     /// <summary>Substitui os campos mutáveis. Senha nula mantém a senha atual.</summary>
-    [HttpPut("{id:int}")]
+    [HttpPut("{id:guid}")]
     [ProducesResponseType(typeof(UsuarioRespostaDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult> Atualizar(int id, AtualizarUsuarioDto dto, CancellationToken ct) =>
+    public async Task<ActionResult> Atualizar(Guid id, AtualizarUsuarioDto dto, CancellationToken ct) =>
         DeResultado(await service.AtualizarAsync(id, dto, ct));
 
     /// <summary>Atualização parcial: envie só o que muda, como apenas o status.</summary>
-    [HttpPatch("{id:int}")]
+    [HttpPatch("{id:guid}")]
     [ProducesResponseType(typeof(UsuarioRespostaDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult> AtualizarParcial(int id, AtualizarParcialUsuarioDto dto, CancellationToken ct) =>
+    public async Task<ActionResult> AtualizarParcial(Guid id, AtualizarParcialUsuarioDto dto, CancellationToken ct) =>
         DeResultado(await service.AtualizarParcialAsync(id, dto, ct));
 }

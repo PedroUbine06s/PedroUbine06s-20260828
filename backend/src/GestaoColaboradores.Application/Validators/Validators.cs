@@ -24,7 +24,6 @@ public class CriarUsuarioValidator : AbstractValidator<CriarUsuarioDto>
 {
     public CriarUsuarioValidator()
     {
-        RuleFor(x => x.Codigo).NotEmpty().MaximumLength(BaseEntity.TamanhoMaximoCodigo);
         RuleFor(x => x.Login).NotEmpty().MaximumLength(Usuario.TamanhoMaximoLogin);
         RuleFor(x => x.Senha)
             .NotEmpty()
@@ -48,7 +47,6 @@ public class CriarUnidadeValidator : AbstractValidator<CriarUnidadeDto>
 {
     public CriarUnidadeValidator()
     {
-        RuleFor(x => x.Codigo).NotEmpty().MaximumLength(BaseEntity.TamanhoMaximoCodigo);
         RuleFor(x => x.Nome).NotEmpty().MaximumLength(Unidade.TamanhoMaximoNome);
     }
 }
@@ -65,10 +63,9 @@ public class CriarColaboradorValidator : AbstractValidator<CriarColaboradorDto>
 {
     public CriarColaboradorValidator()
     {
-        RuleFor(x => x.Codigo).NotEmpty().MaximumLength(BaseEntity.TamanhoMaximoCodigo);
         RuleFor(x => x.Nome).NotEmpty().MaximumLength(Colaborador.TamanhoMaximoNome);
-        RuleFor(x => x.CodigoUnidade).NotEmpty().MaximumLength(BaseEntity.TamanhoMaximoCodigo);
-        RuleFor(x => x.CodigoUsuario).NotEmpty().MaximumLength(BaseEntity.TamanhoMaximoCodigo);
+        RuleFor(x => x.UnidadeId).NotEmpty().WithMessage("Informe a unidade.");
+        RuleFor(x => x.UsuarioId).NotEmpty().WithMessage("Informe o usuário.");
     }
 }
 
@@ -77,7 +74,7 @@ public class AtualizarColaboradorValidator : AbstractValidator<AtualizarColabora
     public AtualizarColaboradorValidator()
     {
         RuleFor(x => x.Nome).NotEmpty().MaximumLength(Colaborador.TamanhoMaximoNome);
-        RuleFor(x => x.CodigoUnidade).NotEmpty().MaximumLength(BaseEntity.TamanhoMaximoCodigo);
+        RuleFor(x => x.UnidadeId).NotEmpty().WithMessage("Informe a unidade.");
     }
 }
 
@@ -119,7 +116,7 @@ public class AtualizarParcialColaboradorValidator : AbstractValidator<AtualizarP
     public AtualizarParcialColaboradorValidator()
     {
         RuleFor(x => x)
-            .Must(x => x.Nome is not null || x.CodigoUnidade is not null)
+            .Must(x => x.Nome is not null || x.UnidadeId is not null)
             .WithMessage("Informe ao menos um campo para atualizar.");
 
         RuleFor(x => x.Nome)
@@ -127,10 +124,9 @@ public class AtualizarParcialColaboradorValidator : AbstractValidator<AtualizarP
             .MaximumLength(Colaborador.TamanhoMaximoNome)
             .When(x => x.Nome is not null);
 
-        RuleFor(x => x.CodigoUnidade)
-            .NotEmpty()
-            .MaximumLength(BaseEntity.TamanhoMaximoCodigo)
-            .When(x => x.CodigoUnidade is not null);
+        RuleFor(x => x.UnidadeId)
+            .NotEmpty().WithMessage("Informe a unidade.")
+            .When(x => x.UnidadeId is not null);
     }
 }
 

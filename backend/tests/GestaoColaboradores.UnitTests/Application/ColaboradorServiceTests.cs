@@ -17,57 +17,58 @@ public class ColaboradorServiceTests
     private readonly IColaboradorRepository _colaboradorRepo = Substitute.For<IColaboradorRepository>();
     private readonly IUnidadeRepository _unidadeRepo = Substitute.For<IUnidadeRepository>();
     private readonly IUsuarioRepository _usuarioRepo = Substitute.For<IUsuarioRepository>();
+    private readonly IGeradorCodigo _gerador = Substitute.For<IGeradorCodigo>();
     private readonly IUnitOfWork _uow = Substitute.For<IUnitOfWork>();
 
     private ColaboradorService CriarService() =>
-        new(_colaboradorRepo, _unidadeRepo, _usuarioRepo, _uow);
+        new(_colaboradorRepo, _unidadeRepo, _usuarioRepo, _gerador, _uow);
 
-    private static Unidade UnidadeAtiva() => Unidade.Criar("UNI-001", "Matriz");
+    public ColaboradorServiceTests()
+    {
+        _gerador.GerarAsync(TipoCodigo.Colaborador, Arg.Any<CancellationToken>()).Returns("COL000001");
+    }
+
+    private static Unidade UnidadeAtiva() => Unidade.Criar("UNI000001", "Matriz");
 
     private static Unidade UnidadeInativa()
     {
-        var unidade = Unidade.Criar("UNI-002", "Filial Centro");
+        var unidade = Unidade.Criar("UNI000002", "Filial Centro");
         unidade.Inativar();
         return unidade;
     }
 
-    private static Usuario UsuarioValido() => Usuario.Criar("USR-001", "maria.silva", "hash");
+    private static Usuario UsuarioValido() => Usuario.Criar("USR000001", "maria.silva", "hash");
 
-    private static CriarColaboradorDto Dto(string codigo = "COL-001", string unidade = "UNI-001") =>
-        new(codigo, "Maria Silva", unidade, "USR-001");
+    /// <summary>Registra a unidade e o usuário nos mocks e devolve o DTO que os referencia.</summary>
+    private CriarColaboradorDto PrepararCriacao(Unidade unidade, Usuario usuario)
+    {
+        _unidadeRepo.ObterPorIdAsync(unidade.Id, Arg.Any<CancellationToken>()).Returns(unidade);
+        _usuarioRepo.ObterPorIdAsync(usuario.Id, Arg.Any<CancellationToken>()).Returns(usuario);
+
+        return new CriarColaboradorDto("Maria Silva", unidade.Id, usuario.Id);
+    }
 
     // --- Criação -------------------------------------------------------------------
 
     [Fact]
     public async Task Criar_ComUnidadeInativa_DevolveRegraDeNegocioENaoPersiste()
     {
-        _colaboradorRepo.ExisteCodigoAsync("COL-001", Arg.Any<CancellationToken>()).Returns(false);
-        _unidadeRepo.ObterPorCodigoAsync("UNI-002", Arg.Any<CancellationToken>()).Returns(UnidadeInativa());
+        var dto = PrepararCriacao(UnidadeInativa(), UsuarioValido());
 
-        var resultado = await CriarService().CriarAsync(Dto(unidade: "UNI-002"));
+        var resultado = await CriarService().CriarAsync(dto);
 
         Assert.Equal(TipoErro.RegraNegocio, resultado.Tipo);
         await _uow.DidNotReceive().CommitAsync(Arg.Any<CancellationToken>());
     }
 
     [Fact]
-    public async Task Criar_ComCodigoDuplicado_DevolveConflito()
-    {
-        _colaboradorRepo.ExisteCodigoAsync("COL-001", Arg.Any<CancellationToken>()).Returns(true);
-
-        var resultado = await CriarService().CriarAsync(Dto());
-
-        Assert.Equal(TipoErro.Conflito, resultado.Tipo);
-        await _uow.DidNotReceive().CommitAsync(Arg.Any<CancellationToken>());
-    }
-
-    [Fact]
     public async Task Criar_ComUnidadeInexistente_DevolveNaoEncontrado()
     {
-        _colaboradorRepo.ExisteCodigoAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(false);
-        _unidadeRepo.ObterPorCodigoAsync("UNI-001", Arg.Any<CancellationToken>()).Returns((Unidade?)null);
+        var inexistente = Guid.CreateVersion7();
+        _unidadeRepo.ObterPorIdAsync(inexistente, Arg.Any<CancellationToken>()).Returns((Unidade?)null);
 
-        var resultado = await CriarService().CriarAsync(Dto());
+        var resultado = await CriarService().CriarAsync(
+            new CriarColaboradorDto("Maria Silva", inexistente, Guid.CreateVersion7()));
 
         Assert.Equal(TipoErro.NaoEncontrado, resultado.Tipo);
     }
@@ -75,27 +76,31 @@ public class ColaboradorServiceTests
     [Fact]
     public async Task Criar_ComUsuarioInexistente_DevolveNaoEncontrado()
     {
-        _colaboradorRepo.ExisteCodigoAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(false);
-        _unidadeRepo.ObterPorCodigoAsync("UNI-001", Arg.Any<CancellationToken>()).Returns(UnidadeAtiva());
-        _usuarioRepo.ObterPorCodigoAsync("USR-001", Arg.Any<CancellationToken>()).Returns((Usuario?)null);
+        var unidade = UnidadeAtiva();
+        var usuarioInexistente = Guid.CreateVersion7();
+        _unidadeRepo.ObterPorIdAsync(unidade.Id, Arg.Any<CancellationToken>()).Returns(unidade);
+        _usuarioRepo.ObterPorIdAsync(usuarioInexistente, Arg.Any<CancellationToken>()).Returns((Usuario?)null);
 
-        var resultado = await CriarService().CriarAsync(Dto());
+        var resultado = await CriarService().CriarAsync(
+            new CriarColaboradorDto("Maria Silva", unidade.Id, usuarioInexistente));
 
         Assert.Equal(TipoErro.NaoEncontrado, resultado.Tipo);
     }
 
+    /// <summary>O código não vem mais do cliente: o serviço pede um ao gerador.</summary>
     [Fact]
-    public async Task Criar_ComDadosValidos_PersisteECommita()
+    public async Task Criar_ComDadosValidos_UsaOCodigoGeradoEPersiste()
     {
-        _colaboradorRepo.ExisteCodigoAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(false);
-        _unidadeRepo.ObterPorCodigoAsync("UNI-001", Arg.Any<CancellationToken>()).Returns(UnidadeAtiva());
-        _usuarioRepo.ObterPorCodigoAsync("USR-001", Arg.Any<CancellationToken>()).Returns(UsuarioValido());
+        var unidade = UnidadeAtiva();
+        var dto = PrepararCriacao(unidade, UsuarioValido());
 
-        var resultado = await CriarService().CriarAsync(Dto());
+        var resultado = await CriarService().CriarAsync(dto);
 
         Assert.True(resultado.EhSucesso);
-        Assert.Equal("Maria Silva", resultado.Valor!.Nome);
-        Assert.Equal("UNI-001", resultado.Valor.CodigoUnidade);
+        Assert.Equal("COL000001", resultado.Valor!.Codigo);
+        Assert.Equal("Maria Silva", resultado.Valor.Nome);
+        Assert.Equal(unidade.Id, resultado.Valor.UnidadeId);
+        await _gerador.Received().GerarAsync(TipoCodigo.Colaborador, Arg.Any<CancellationToken>());
         await _colaboradorRepo.Received().AdicionarAsync(Arg.Any<Colaborador>(), Arg.Any<CancellationToken>());
         await _uow.Received(1).CommitAsync(Arg.Any<CancellationToken>());
     }
@@ -105,11 +110,13 @@ public class ColaboradorServiceTests
     [Fact]
     public async Task Atualizar_ParaUnidadeInativa_DevolveRegraDeNegocio()
     {
-        var colaborador = Colaborador.Criar("COL-001", "Maria Silva", UnidadeAtiva(), UsuarioValido());
-        _colaboradorRepo.ObterPorIdAsync(1, Arg.Any<CancellationToken>()).Returns(colaborador);
-        _unidadeRepo.ObterPorCodigoAsync("UNI-002", Arg.Any<CancellationToken>()).Returns(UnidadeInativa());
+        var colaborador = Colaborador.Criar("COL000001", "Maria Silva", UnidadeAtiva(), UsuarioValido());
+        var destinoInativo = UnidadeInativa();
+        _colaboradorRepo.ObterPorIdAsync(colaborador.Id, Arg.Any<CancellationToken>()).Returns(colaborador);
+        _unidadeRepo.ObterPorIdAsync(destinoInativo.Id, Arg.Any<CancellationToken>()).Returns(destinoInativo);
 
-        var resultado = await CriarService().AtualizarAsync(1, new AtualizarColaboradorDto("Novo Nome", "UNI-002"));
+        var resultado = await CriarService().AtualizarAsync(
+            colaborador.Id, new AtualizarColaboradorDto("Novo Nome", destinoInativo.Id));
 
         Assert.Equal(TipoErro.RegraNegocio, resultado.Tipo);
         Assert.Equal("Maria Silva", colaborador.Nome); // nada foi alterado
@@ -119,9 +126,11 @@ public class ColaboradorServiceTests
     [Fact]
     public async Task Atualizar_ComIdInexistente_DevolveNaoEncontrado()
     {
-        _colaboradorRepo.ObterPorIdAsync(99, Arg.Any<CancellationToken>()).Returns((Colaborador?)null);
+        var inexistente = Guid.CreateVersion7();
+        _colaboradorRepo.ObterPorIdAsync(inexistente, Arg.Any<CancellationToken>()).Returns((Colaborador?)null);
 
-        var resultado = await CriarService().AtualizarAsync(99, new AtualizarColaboradorDto("Nome", "UNI-001"));
+        var resultado = await CriarService().AtualizarAsync(
+            inexistente, new AtualizarColaboradorDto("Nome", Guid.CreateVersion7()));
 
         Assert.Equal(TipoErro.NaoEncontrado, resultado.Tipo);
     }
@@ -129,28 +138,30 @@ public class ColaboradorServiceTests
     [Fact]
     public async Task AtualizarParcial_ApenasComNome_NaoConsultaUnidades()
     {
-        var colaborador = Colaborador.Criar("COL-001", "Maria Silva", UnidadeAtiva(), UsuarioValido());
-        _colaboradorRepo.ObterComUnidadeAsync(1, Arg.Any<CancellationToken>()).Returns(colaborador);
+        var colaborador = Colaborador.Criar("COL000001", "Maria Silva", UnidadeAtiva(), UsuarioValido());
+        _colaboradorRepo.ObterComUnidadeAsync(colaborador.Id, Arg.Any<CancellationToken>()).Returns(colaborador);
 
-        var resultado = await CriarService().AtualizarParcialAsync(1, new AtualizarParcialColaboradorDto("Maria Souza", null));
+        var resultado = await CriarService().AtualizarParcialAsync(
+            colaborador.Id, new AtualizarParcialColaboradorDto("Maria Souza", null));
 
         Assert.True(resultado.EhSucesso);
         Assert.Equal("Maria Souza", colaborador.Nome);
-        await _unidadeRepo.DidNotReceive().ObterPorCodigoAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+        await _unidadeRepo.DidNotReceive().ObterPorIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
     public async Task AtualizarParcial_ApenasComUnidade_PreservaONome()
     {
-        var colaborador = Colaborador.Criar("COL-001", "Maria Silva", UnidadeAtiva(), UsuarioValido());
-        _colaboradorRepo.ObterComUnidadeAsync(1, Arg.Any<CancellationToken>()).Returns(colaborador);
-        _unidadeRepo.ObterPorCodigoAsync("UNI-003", Arg.Any<CancellationToken>())
-            .Returns(Unidade.Criar("UNI-003", "Filial Sul"));
+        var colaborador = Colaborador.Criar("COL000001", "Maria Silva", UnidadeAtiva(), UsuarioValido());
+        var destino = Unidade.Criar("UNI000003", "Filial Sul");
+        _colaboradorRepo.ObterComUnidadeAsync(colaborador.Id, Arg.Any<CancellationToken>()).Returns(colaborador);
+        _unidadeRepo.ObterPorIdAsync(destino.Id, Arg.Any<CancellationToken>()).Returns(destino);
 
-        await CriarService().AtualizarParcialAsync(1, new AtualizarParcialColaboradorDto(null, "UNI-003"));
+        await CriarService().AtualizarParcialAsync(
+            colaborador.Id, new AtualizarParcialColaboradorDto(null, destino.Id));
 
         Assert.Equal("Maria Silva", colaborador.Nome);
-        Assert.Equal("UNI-003", colaborador.Unidade.Codigo);
+        Assert.Equal(destino.Id, colaborador.UnidadeId);
     }
 
     // --- Remoção -------------------------------------------------------------------
@@ -164,11 +175,11 @@ public class ColaboradorServiceTests
     public async Task Remover_InativaOUsuarioVinculado()
     {
         var usuario = UsuarioValido();
-        var colaborador = Colaborador.Criar("COL-001", "Maria Silva", UnidadeAtiva(), usuario);
-        _colaboradorRepo.ObterPorIdAsync(1, Arg.Any<CancellationToken>()).Returns(colaborador);
-        _usuarioRepo.ObterPorIdAsync(colaborador.UsuarioId, Arg.Any<CancellationToken>()).Returns(usuario);
+        var colaborador = Colaborador.Criar("COL000001", "Maria Silva", UnidadeAtiva(), usuario);
+        _colaboradorRepo.ObterPorIdAsync(colaborador.Id, Arg.Any<CancellationToken>()).Returns(colaborador);
+        _usuarioRepo.ObterPorIdAsync(usuario.Id, Arg.Any<CancellationToken>()).Returns(usuario);
 
-        var resultado = await CriarService().RemoverAsync(1);
+        var resultado = await CriarService().RemoverAsync(colaborador.Id);
 
         Assert.True(resultado.EhSucesso);
         Assert.False(usuario.Ativo);
@@ -180,9 +191,10 @@ public class ColaboradorServiceTests
     [Fact]
     public async Task Remover_ComIdInexistente_DevolveNaoEncontrado()
     {
-        _colaboradorRepo.ObterPorIdAsync(99, Arg.Any<CancellationToken>()).Returns((Colaborador?)null);
+        var inexistente = Guid.CreateVersion7();
+        _colaboradorRepo.ObterPorIdAsync(inexistente, Arg.Any<CancellationToken>()).Returns((Colaborador?)null);
 
-        var resultado = await CriarService().RemoverAsync(99);
+        var resultado = await CriarService().RemoverAsync(inexistente);
 
         Assert.Equal(TipoErro.NaoEncontrado, resultado.Tipo);
         _colaboradorRepo.DidNotReceive().Remover(Arg.Any<Colaborador>());

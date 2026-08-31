@@ -15,17 +15,16 @@ public class UnidadesController(IUnidadeService service) : ApiControllerBase
         DeResultado(await service.ListarAsync(ct));
 
     /// <summary>Retorna uma unidade pelo id, com seus colaboradores.</summary>
-    [HttpGet("{id:int}")]
+    [HttpGet("{id:guid}")]
     [ProducesResponseType(typeof(UnidadeComColaboradoresDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult> ObterPorId(int id, CancellationToken ct) =>
+    public async Task<ActionResult> ObterPorId(Guid id, CancellationToken ct) =>
         DeResultado(await service.ObterPorIdAsync(id, ct));
 
-    /// <summary>Cadastra uma unidade. O código precisa ser único.</summary>
+    /// <summary>Cadastra uma unidade. O código é gerado pelo sistema (UNI000001).</summary>
     [HttpPost]
     [ProducesResponseType(typeof(UnidadeRespostaDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<ActionResult> Criar(CriarUnidadeDto dto, CancellationToken ct)
     {
         var resultado = await service.CriarAsync(dto, ct);
@@ -34,21 +33,21 @@ public class UnidadesController(IUnidadeService service) : ApiControllerBase
     }
 
     /// <summary>Substitui nome e status. Exige os dois campos.</summary>
-    [HttpPut("{id:int}")]
+    [HttpPut("{id:guid}")]
     [ProducesResponseType(typeof(UnidadeRespostaDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult> Atualizar(int id, AtualizarUnidadeDto dto, CancellationToken ct) =>
+    public async Task<ActionResult> Atualizar(Guid id, AtualizarUnidadeDto dto, CancellationToken ct) =>
         DeResultado(await service.AtualizarAsync(id, dto, ct));
 
     /// <summary>
     /// Atualização parcial. É por aqui que se inativa uma unidade, enviando apenas
     /// <c>{ "ativo": false }</c> — a partir daí ela recusa novos colaboradores com 422.
     /// </summary>
-    [HttpPatch("{id:int}")]
+    [HttpPatch("{id:guid}")]
     [ProducesResponseType(typeof(UnidadeRespostaDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult> AtualizarParcial(int id, AtualizarParcialUnidadeDto dto, CancellationToken ct) =>
+    public async Task<ActionResult> AtualizarParcial(Guid id, AtualizarParcialUnidadeDto dto, CancellationToken ct) =>
         DeResultado(await service.AtualizarParcialAsync(id, dto, ct));
 }
