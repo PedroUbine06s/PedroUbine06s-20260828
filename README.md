@@ -157,19 +157,20 @@ e de erro (401, 400, 404, 409, 422), com testes de status e corpo.
 ## Testes
 
 ```bash
-cd backend && dotnet test     # 91 testes
+cd backend && dotnet test     # 95 testes
 cd frontend && npm test       # 33 testes
 ```
 
-**91 no backend.** Os **63 de unidade** (xUnit + NSubstitute) cobrem o domínio sem mock algum
+**95 no backend.** Os **64 de unidade** (xUnit + NSubstitute) cobrem o domínio sem mock algum
 e verificam efeito, não só retorno: quando uma regra falha, o teste assere que `CommitAsync`
-**não** foi chamado. Os **28 de integração** (`WebApplicationFactory` + **Testcontainers**)
+**não** foi chamado. Os **31 de integração** (`WebApplicationFactory` + **Testcontainers**)
 sobem um PostgreSQL real — não se usa InMemory de propósito, porque ele não tem índice único,
 e é o índice que garante a unicidade de código e login.
 
 Alguns que valem destaque: o login roda BCrypt mesmo quando o usuário não existe, porque
 mensagem igual não bastaria se o tempo entregasse a diferença; a resposta de usuários nunca
-contém "senha" nem "hash"; remover colaborador inativa o usuário na mesma transação; o filtro
+contém "senha" nem "hash"; remover colaborador inativa o usuário na mesma transação; renomear quem ficou numa unidade
+inativa continua possível, enquanto transferir alguém para ela é recusado; o filtro
 `semColaborador` some com o usuário assim que ele ganha colaborador, sem anular o filtro de
 status; e duas criações seguidas nunca recebem o mesmo código.
 

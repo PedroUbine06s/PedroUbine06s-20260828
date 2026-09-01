@@ -192,6 +192,60 @@ public class FluxosTests(ApiFactory factory) : IClassFixture<ApiFactory>
         Assert.DoesNotContain(pagina.Itens, u => u.Login == "carlos.lima");
     }
 
+    /// <summary>
+    /// Inativar unidade não desvincula quem já estava — então quem ficou precisa continuar
+    /// editável. A regra é sobre RECEBER colaborador, e quem já está lá não está sendo
+    /// recebido.
+    /// </summary>
+    [Fact]
+    public async Task AtualizarColaborador_DeUnidadeInativa_PermiteRenomearSemTransferir()
+    {
+        var client = await factory.CriarClienteAutenticadoAsync();
+        var inativa = await UnidadeDoSeedAsync(client, ativa: false);
+        var colaborador = inativa.Colaboradores.First();
+
+        var resposta = await client.PutAsJsonAsync($"/api/v1/colaboradores/{colaborador.Id}",
+            new AtualizarColaboradorDto($"{colaborador.Nome} Renomeado", inativa.Id));
+
+        resposta.EnsureSuccessStatusCode();
+        var atualizado = await resposta.Content.ReadFromJsonAsync<ColaboradorRespostaDto>();
+        Assert.Equal($"{colaborador.Nome} Renomeado", atualizado!.Nome);
+        Assert.Equal(inativa.Id, atualizado.UnidadeId);
+
+        // Devolve o nome original: os testes compartilham o banco semeado.
+        await client.PutAsJsonAsync($"/api/v1/colaboradores/{colaborador.Id}",
+            new AtualizarColaboradorDto(colaborador.Nome, inativa.Id));
+    }
+
+    /// <summary>Transferir para unidade inativa continua recusado — é aí que ela recebe.</summary>
+    [Fact]
+    public async Task AtualizarColaborador_TransferindoParaUnidadeInativa_Responde422()
+    {
+        var client = await factory.CriarClienteAutenticadoAsync();
+        var ativa = await UnidadeDoSeedAsync(client, ativa: true);
+        var inativa = await UnidadeDoSeedAsync(client, ativa: false);
+        var daAtiva = ativa.Colaboradores.First();
+
+        var resposta = await client.PutAsJsonAsync($"/api/v1/colaboradores/{daAtiva.Id}",
+            new AtualizarColaboradorDto(daAtiva.Nome, inativa.Id));
+
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, resposta.StatusCode);
+    }
+
+    /// <summary>PUT e PATCH precisam concordar diante do mesmo corpo.</summary>
+    [Fact]
+    public async Task AtualizarParcial_ReafirmandoUnidadeInativaAtual_NaoEhTransferencia()
+    {
+        var client = await factory.CriarClienteAutenticadoAsync();
+        var inativa = await UnidadeDoSeedAsync(client, ativa: false);
+        var colaborador = inativa.Colaboradores.First();
+
+        var resposta = await client.PatchAsJsonAsync($"/api/v1/colaboradores/{colaborador.Id}",
+            new AtualizarParcialColaboradorDto(null, inativa.Id));
+
+        resposta.EnsureSuccessStatusCode();
+    }
+
     [Fact]
     public async Task ListarUsuarios_NuncaExpoeSenha()
     {

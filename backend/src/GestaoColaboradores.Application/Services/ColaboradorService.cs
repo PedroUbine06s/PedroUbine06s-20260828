@@ -72,7 +72,9 @@ public class ColaboradorService(
 
     public async Task<Result<ColaboradorRespostaDto>> AtualizarAsync(Guid id, AtualizarColaboradorDto dto, CancellationToken ct = default)
     {
-        var colaborador = await colaboradorRepo.ObterPorIdAsync(id, ct);
+        // Com Include: quando não há transferência, a navegação não é preenchida por
+        // AlterarUnidade e montar o DTO de resposta acessaria referência nula.
+        var colaborador = await colaboradorRepo.ObterComUnidadeAsync(id, ct);
         if (colaborador is null)
             return Result<ColaboradorRespostaDto>.Falha($"Colaborador {id} não encontrado.", TipoErro.NaoEncontrado);
 
@@ -80,13 +82,20 @@ public class ColaboradorService(
         if (unidade is null)
             return Result<ColaboradorRespostaDto>.Falha("Unidade não encontrada.", TipoErro.NaoEncontrado);
 
-        if (!unidade.PodeReceberColaborador)
+        // A regra é que unidade inativa não RECEBE colaborador; quem já está lá não está
+        // sendo recebido. Validar sem comparar impediria até renomear alguém de uma unidade
+        // inativa, contradizendo o fato de que inativar não desvincula quem já estava.
+        if (colaborador.UnidadeId != dto.UnidadeId && !unidade.PodeReceberColaborador)
             return Result<ColaboradorRespostaDto>.Falha(
                 "Unidade inativa não pode receber colaboradores.", TipoErro.RegraNegocio);
 
 
         colaborador.AlterarNome(dto.Nome);
-        colaborador.AlterarUnidade(unidade);
+
+        // AlterarUnidade é transferência e recusa unidade inativa no próprio domínio.
+        // Chamá-la com a unidade que já está lá lançaria por uma transferência inexistente.
+        if (colaborador.UnidadeId != dto.UnidadeId)
+            colaborador.AlterarUnidade(unidade);
 
         await uow.CommitAsync(ct);
 
@@ -109,7 +118,9 @@ public class ColaboradorService(
             if (novaUnidade is null)
                 return Result<ColaboradorRespostaDto>.Falha("Unidade não encontrada.", TipoErro.NaoEncontrado);
 
-            if (!novaUnidade.PodeReceberColaborador)
+            // Mesma comparação do PUT: reafirmar a unidade atual não é transferência, e as
+            // duas rotas precisam concordar diante do mesmo corpo.
+            if (colaborador.UnidadeId != dto.UnidadeId.Value && !novaUnidade.PodeReceberColaborador)
                 return Result<ColaboradorRespostaDto>.Falha(
                     "Unidade inativa não pode receber colaboradores.", TipoErro.RegraNegocio);
         }
@@ -117,7 +128,7 @@ public class ColaboradorService(
         if (dto.Nome is not null)
             colaborador.AlterarNome(dto.Nome);
 
-        if (novaUnidade is not null)
+        if (novaUnidade is not null && colaborador.UnidadeId != novaUnidade.Id)
             colaborador.AlterarUnidade(novaUnidade);
 
         await uow.CommitAsync(ct);

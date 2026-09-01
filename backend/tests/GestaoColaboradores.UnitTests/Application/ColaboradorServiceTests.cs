@@ -112,7 +112,7 @@ public class ColaboradorServiceTests
     {
         var colaborador = Colaborador.Criar("COL000001", "Maria Silva", UnidadeAtiva(), UsuarioValido());
         var destinoInativo = UnidadeInativa();
-        _colaboradorRepo.ObterPorIdAsync(colaborador.Id, Arg.Any<CancellationToken>()).Returns(colaborador);
+        _colaboradorRepo.ObterComUnidadeAsync(colaborador.Id, Arg.Any<CancellationToken>()).Returns(colaborador);
         _unidadeRepo.ObterPorIdAsync(destinoInativo.Id, Arg.Any<CancellationToken>()).Returns(destinoInativo);
 
         var resultado = await CriarService().AtualizarAsync(
@@ -121,6 +121,30 @@ public class ColaboradorServiceTests
         Assert.Equal(TipoErro.RegraNegocio, resultado.Tipo);
         Assert.Equal("Maria Silva", colaborador.Nome); // nada foi alterado
         await _uow.DidNotReceive().CommitAsync(Arg.Any<CancellationToken>());
+    }
+
+    /// <summary>
+    /// Inativar unidade não desvincula quem já estava, então quem ficou segue editável:
+    /// a regra é sobre RECEBER colaborador, e permanecer não é ser recebido.
+    /// </summary>
+    [Fact]
+    public async Task Atualizar_MantendoAUnidadeInativaAtual_RenomeiaSemTransferir()
+    {
+        var inativa = UnidadeInativa();
+        var colaborador = Colaborador.Criar("COL000001", "Maria Silva", UnidadeAtiva(), UsuarioValido());
+        // Coloca o colaborador na unidade que depois é inativada, como acontece na prática.
+        colaborador.AlterarUnidade(Unidade.Criar("UNI000002", "Filial Centro"));
+        var mesmaUnidade = colaborador.UnidadeId;
+        _colaboradorRepo.ObterComUnidadeAsync(colaborador.Id, Arg.Any<CancellationToken>()).Returns(colaborador);
+        _unidadeRepo.ObterPorIdAsync(mesmaUnidade, Arg.Any<CancellationToken>()).Returns(inativa);
+
+        var resultado = await CriarService().AtualizarAsync(
+            colaborador.Id, new AtualizarColaboradorDto("Maria Souza", mesmaUnidade));
+
+        Assert.True(resultado.EhSucesso);
+        Assert.Equal("Maria Souza", colaborador.Nome);
+        Assert.Equal(mesmaUnidade, colaborador.UnidadeId);
+        await _uow.Received(1).CommitAsync(Arg.Any<CancellationToken>());
     }
 
     [Fact]
