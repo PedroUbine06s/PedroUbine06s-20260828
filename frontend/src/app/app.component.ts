@@ -55,9 +55,13 @@ import { NotificacoesComponent } from './shared/notificacoes.component';
     .conteudo.com-cabecalho {
       margin-top: 3rem;
     }
+    /* A classe do Carbon é feita para um ícone, que ela centraliza por outros meios.
+       Com texto puro o conteúdo encostava no topo da caixa de 48px. */
     .cds--header__action {
       width: auto;
       padding: 0 1rem;
+      align-items: center;
+      justify-content: center;
     }
   `
 })

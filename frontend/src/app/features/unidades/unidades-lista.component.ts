@@ -34,7 +34,6 @@ import { UnidadesService } from './unidades.service';
       <table class="cds--data-table cds--data-table--md">
         <thead>
           <tr>
-            <th></th>
             <th><span class="cds--table-header-label">Código</span></th>
             <th><span class="cds--table-header-label">Nome</span></th>
             <th><span class="cds--table-header-label">Status</span></th>
@@ -45,23 +44,28 @@ import { UnidadesService } from './unidades.service';
         <tbody>
           @for (u of unidades(); track u.id) {
             <tr>
-              <td class="coluna-expandir">
-                <button
-                  cdsButton="ghost"
-                  size="sm"
-                  [attr.aria-expanded]="expandida() === u.id"
-                  [attr.aria-label]="
-                    (expandida() === u.id ? 'Recolher' : 'Expandir') + ' colaboradores de ' + u.nome
-                  "
-                  (click)="alternarExpansao(u.id)"
-                >
-                  {{ expandida() === u.id ? '▾' : '▸' }}
-                </button>
-              </td>
               <td>{{ u.codigo }}</td>
               <td>{{ u.nome }}</td>
               <td><app-status-badge [ativo]="u.ativo" /></td>
-              <td>{{ u.colaboradores.length }}</td>
+              <td>
+                <!-- O rótulo em palavras é o que faz a expansão ser descoberta; o chevron
+                     sozinho não dizia que ali havia uma ação. Sem colaboradores não há o
+                     que expandir, então vira texto simples. -->
+                @if (u.colaboradores.length > 0) {
+                  <button
+                    class="expandir"
+                    type="button"
+                    [attr.aria-expanded]="expandida() === u.id"
+                    (click)="alternarExpansao(u.id)"
+                  >
+                    <span class="chevron" [class.aberto]="expandida() === u.id">⌄</span>
+                    {{ u.colaboradores.length }}
+                    {{ u.colaboradores.length === 1 ? 'colaborador' : 'colaboradores' }}
+                  </button>
+                } @else {
+                  <span class="vazio">nenhum colaborador</span>
+                }
+              </td>
               <td class="acoes">
                 <button cdsButton="ghost" size="sm" (click)="abrirEdicao(u)">Editar</button>
                 <button
@@ -77,7 +81,7 @@ import { UnidadesService } from './unidades.service';
 
             @if (expandida() === u.id) {
               <tr class="linha-detalhe">
-                <td colspan="6">
+                <td colspan="5">
                   @if (u.colaboradores.length === 0) {
                     <p class="vazio">Esta unidade não tem colaboradores.</p>
                   } @else {
@@ -132,8 +136,34 @@ import { UnidadesService } from './unidades.service';
       display: flex;
       gap: 0.25rem;
     }
-    .coluna-expandir {
-      width: 2.5rem;
+    .expandir {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0;
+      border: 0;
+      background: none;
+      font: inherit;
+      color: var(--cds-link-primary, #0f62fe);
+      cursor: pointer;
+    }
+    .expandir:hover {
+      text-decoration: underline;
+    }
+    .expandir:focus-visible {
+      outline: 2px solid var(--cds-focus, #0f62fe);
+      outline-offset: 2px;
+    }
+    .chevron {
+      display: inline-block;
+      transition: transform 0.15s ease;
+      line-height: 1;
+    }
+    .chevron.aberto {
+      transform: rotate(180deg);
+    }
+    .vazio {
+      color: var(--cds-text-secondary, #525252);
     }
     .linha-detalhe td {
       background: var(--cds-layer-accent, #e0e0e0);
