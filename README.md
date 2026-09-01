@@ -1,5 +1,7 @@
 # Sistema de Gestão de Colaboradores e Unidades
 
+[![CI](https://github.com/PedroUbine06s/PedroUbine06s-20260828/actions/workflows/ci.yml/badge.svg)](https://github.com/PedroUbine06s/PedroUbine06s-20260828/actions/workflows/ci.yml)
+
 ![Portal em uso: inativar uma unidade e ver o cadastro de colaborador deixar de oferecê-la](docs/demo.gif)
 
 Gestão de usuários, colaboradores e unidades: uma API ASP.NET Core com portal Angular,
@@ -257,5 +259,3 @@ Para criar novas:
 ```bash
 dotnet ef migrations add <Nome> -p src/GestaoColaboradores.Infrastructure -s src/GestaoColaboradores.Api
 ```
-
-<!-- TODO: badge do GitHub Actions quando o CI estiver configurado -->
