@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Gestão de Colaboradores e Unidades",
-    "description": "Rode o login primeiro: ele salva o token no environment. Os codigos (USR000001, UNI000001, COL000001) sao gerados pelo sistema, e as referencias sao feitas por Id (UUID) - por isso as criacoes guardam o Id da resposta em variaveis e as requisicoes seguintes as reutilizam. Rode as pastas na ordem.",
+    "description": "Rode o login primeiro: ele salva o token no environment. Os codigos (USR000001, UNI000001, COL000001) sao gerados pelo sistema, e as referencias sao feitas por Id (UUID) - por isso as criacoes guardam o Id da resposta em variaveis e as requisicoes seguintes as reutilizam. Rode as pastas na ordem, ou a collection inteira.\n\nDUAS COISAS QUE FAZEM UMA SEGUNDA EXECUCAO FALHAR, e nenhuma delas e defeito:\n\n1) O login tem rate limit de 5 por minuto por IP, e esta collection faz 3 logins. Rodar duas vezes em menos de um minuto devolve 429 no login, e sem token todo o resto responde 401. Espere um minuto entre execucoes.\n\n2) A collection escreve: cria, atualiza, inativa e remove. As asserções que citam dados do seed (a unidade inativa, o usuario carlos.lima) valem sobre o seed intacto. Para repetir do zero: docker compose down -v && docker compose up -d.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -143,14 +143,22 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "const unidades = pm.response.json();",
-                  "pm.test('unidades vem com colaboradores aninhados', function () {",
-                  "    pm.expect(unidades.length).to.be.above(0);",
+                  "// A listagem devolve envelope paginado: os registros vem em .itens.",
+                  "const pagina = pm.response.json();",
+                  "pm.test('envelope paginado com unidades e colaboradores aninhados', function () {",
+                  "    pm.expect(pagina.itens.length).to.be.above(0);",
+                  "    pm.expect(pagina.total).to.be.a('number');",
                   "});",
-                  "const ativa = unidades.find(u => u.ativo);",
-                  "const inativa = unidades.find(u => !u.ativo);",
+                  "const ativa = pagina.itens.find(u => u.ativo);",
+                  "const inativa = pagina.itens.find(u => !u.ativo);",
                   "if (ativa) pm.environment.set('unidadeAtivaId', ativa.id);",
-                  "if (inativa) pm.environment.set('unidadeInativaId', inativa.id);"
+                  "if (inativa) pm.environment.set('unidadeInativaId', inativa.id);",
+                  "// Guarda tambem alguem que ja estava na unidade inativa: inativar nao desvincula,",
+                  "// entao esse colaborador precisa continuar editavel.",
+                  "if (inativa && inativa.colaboradores.length) {",
+                  "    pm.environment.set('colaboradorEmUnidadeInativaId', inativa.colaboradores[0].id);",
+                  "    pm.environment.set('colaboradorEmUnidadeInativaNome', inativa.colaboradores[0].nome);",
+                  "}"
                 ]
               }
             }
@@ -288,7 +296,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('todos vem inativos', function () {",
-                  "    pm.response.json().forEach(u => pm.expect(u.ativo).to.eql(false));",
+                  "    pm.response.json().itens.forEach(u => pm.expect(u.ativo).to.eql(false));",
                   "});"
                 ]
               }
@@ -321,6 +329,76 @@
             "method": "GET",
             "url": "{{baseUrl}}/api/v1/usuarios?pagina=1&tamanho=2"
           }
+        },
+        {
+          "name": "Listar apenas quem ainda nao tem colaborador (regra 1:1)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/usuarios?semColaborador=true&tamanho=100",
+            "description": "Um usuario pertence a um unico colaborador. E este filtro que permite ao portal oferecer apenas quem e elegivel, em vez de deixar a pessoa escolher e levar 409."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('nenhum dos devolvidos esta vinculado', function () {",
+                  "    const p = pm.response.json();",
+                  "    pm.expect(p.itens).to.be.an('array');",
+                  "    // maria.silva, joao.souza e ana.costa sao colaboradores no seed.",
+                  "    const vinculados = ['maria.silva', 'joao.souza', 'ana.costa'];",
+                  "    p.itens.forEach(u => pm.expect(vinculados).to.not.include(u.login));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar elegiveis para novo colaborador (consulta do portal)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/usuarios?ativo=true&semColaborador=true&tamanho=100"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('os dois filtros valem juntos', function () {",
+                  "    const p = pm.response.json();",
+                  "    p.itens.forEach(u => pm.expect(u.ativo).to.eql(true));",
+                  "    // carlos.lima nao tem colaborador, mas esta inativo: um filtro nao anula o outro.",
+                  "    p.itens.forEach(u => pm.expect(u.login).to.not.eql('carlos.lima'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar apenas os ja vinculados (complemento do filtro)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/usuarios?semColaborador=false&tamanho=100"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('devolve o complemento, nao a lista toda', function () {",
+                  "    const p = pm.response.json();",
+                  "    pm.expect(p.itens.length).to.be.above(0);",
+                  "    p.itens.forEach(u => pm.expect(u.login).to.not.eql('admin'));",
+                  "});"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Criar (codigo gerado pelo sistema)",
@@ -617,6 +695,38 @@
               "raw": "{\n  \"unidadeId\": \"{{unidadeInativaId}}\"\n}"
             }
           }
+        },
+        {
+          "name": "PUT renomeando quem ja estava em unidade INATIVA (esperado 200)",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/api/v1/colaboradores/{{colaboradorEmUnidadeInativaId}}",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"{{colaboradorEmUnidadeInativaNome}} Renomeado\",\n  \"unidadeId\": \"{{unidadeInativaId}}\"\n}"
+            },
+            "description": "Inativar unidade nao desvincula quem ja estava, entao quem ficou segue editavel: a regra e sobre RECEBER colaborador, e permanecer nao e ser recebido. Transferir alguem PARA a unidade inativa continua 422."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 - renomear nao e transferencia', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().unidadeId).to.eql(pm.environment.get('unidadeInativaId'));",
+                  "});"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Remover (204 - e inativa o usuario vinculado)",

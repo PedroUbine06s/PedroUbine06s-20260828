@@ -158,8 +158,14 @@ sequence dessincronizasse do conteúdo da tabela, o cliente receberia 409 por um
 envia. Distinguir exigiria acoplar o middleware a nomes de constraint gerados pelo EF, que
 quebram ao renomear uma entidade — preferi a falha genérica à frágil.
 
-A collection do Postman em [`postman/`](postman/) tem 30 requisições cobrindo caminhos felizes
-e de erro (401, 400, 404, 409, 422), com testes de status e corpo.
+A collection do Postman em [`postman/`](postman/) tem **35 requisições** cobrindo caminhos
+felizes e de erro (401, 400, 404, 409, 422), com testes automáticos de status e corpo — roda
+inteira com `newman run` e passa contra o seed intacto.
+
+Ela **escreve**: cria, atualiza, inativa e remove. Para repetir do zero, recrie o banco com
+`docker compose down -v`. E como o login tem rate limit de 5 por minuto e a collection faz 3
+logins, duas execuções seguidas devolvem 429 — é a defesa funcionando, não defeito. A
+descrição da collection repete os dois avisos.
 
 ## Testes
 
