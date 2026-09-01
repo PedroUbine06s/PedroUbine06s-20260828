@@ -33,6 +33,7 @@ services:
       Jwt__Secret: ${JWT_SECRET}
       Jwt__ExpiracaoMinutos: "60"
       Jwt__Emissor: "GestaoColaboradores"
+      RateLimit__LoginPorMinuto: ${RATE_LIMIT_LOGIN_POR_MINUTO}
     ports:
       - "5000:8080"
     healthcheck:

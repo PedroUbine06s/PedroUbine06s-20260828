@@ -90,7 +90,9 @@ concorrência entre requisições é resolvida pelo índice único.
 - **Rate limiting só no login** — é onde a defesa contra enumeração cobra caro: o BCrypt roda
   mesmo quando o login não existe, então uma requisição inválida passou de ~1 ms para ~100 ms
   de CPU. A janela é por IP, para um atacante não trancar a porta dos demais, e o limite é
-  configurável (`RateLimit:LoginPorMinuto`).
+  configurável (`RateLimit:LoginPorMinuto`) porque é número de operação, não de código: o
+  padrão é 5, adequado a um login exposto na internet, e o contêiner sobe com 20, porque ali
+  não existe esse modelo de ameaça e 5 transformaria explorar a API em esbarrar em 429.
 - **Concorrência otimista por token de versão** — `Versao` entra no `WHERE` do `UPDATE` e o
   conflito vira **409** em vez de sobrescrever em silêncio. Não uso `xmin` porque o suporte
   saiu do Npgsql 10. **Escopo honesto:** protege a janela dentro de uma requisição; o caso
@@ -164,9 +166,7 @@ inteira com `newman run` e passa contra o seed intacto.
 
 Ela escreve no banco e é **idempotente**: o usuário criado leva um login único por execução,
 porque um usuário pertence a um único colaborador e um login fixo colidiria em 409 na
-repetição. Duas execuções seguidas passam; a terceira dentro do mesmo minuto esbarra no rate
-limit do login (5 por minuto, e ela faz 3), que é a defesa funcionando. A descrição da
-collection registra isso.
+repetição. Roda quantas vezes for preciso.
 
 ## Testes
 
