@@ -162,10 +162,11 @@ A collection do Postman em [`postman/`](postman/) tem **35 requisições** cobri
 felizes e de erro (401, 400, 404, 409, 422), com testes automáticos de status e corpo — roda
 inteira com `newman run` e passa contra o seed intacto.
 
-Ela **escreve**: cria, atualiza, inativa e remove. Para repetir do zero, recrie o banco com
-`docker compose down -v`. E como o login tem rate limit de 5 por minuto e a collection faz 3
-logins, duas execuções seguidas devolvem 429 — é a defesa funcionando, não defeito. A
-descrição da collection repete os dois avisos.
+Ela escreve no banco e é **idempotente**: o usuário criado leva um login único por execução,
+porque um usuário pertence a um único colaborador e um login fixo colidiria em 409 na
+repetição. Duas execuções seguidas passam; a terceira dentro do mesmo minuto esbarra no rate
+limit do login (5 por minuto, e ela faz 3), que é a defesa funcionando. A descrição da
+collection registra isso.
 
 ## Testes
 

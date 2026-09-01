@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Gestão de Colaboradores e Unidades",
-    "description": "Rode o login primeiro: ele salva o token no environment. Os codigos (USR000001, UNI000001, COL000001) sao gerados pelo sistema, e as referencias sao feitas por Id (UUID) - por isso as criacoes guardam o Id da resposta em variaveis e as requisicoes seguintes as reutilizam. Rode as pastas na ordem, ou a collection inteira.\n\nDUAS COISAS QUE FAZEM UMA SEGUNDA EXECUCAO FALHAR, e nenhuma delas e defeito:\n\n1) O login tem rate limit de 5 por minuto por IP, e esta collection faz 3 logins. Rodar duas vezes em menos de um minuto devolve 429 no login, e sem token todo o resto responde 401. Espere um minuto entre execucoes.\n\n2) A collection escreve: cria, atualiza, inativa e remove. As asserções que citam dados do seed (a unidade inativa, o usuario carlos.lima) valem sobre o seed intacto. Para repetir do zero: docker compose down -v && docker compose up -d.",
+    "description": "Rode o login primeiro: ele salva o token no environment. Os codigos (USR000001, UNI000001, COL000001) sao gerados pelo sistema, e as referencias sao feitas por Id (UUID) - por isso as criacoes guardam o Id da resposta em variaveis e as requisicoes seguintes as reutilizam. Rode as pastas na ordem, ou a collection inteira.\n\nA collection escreve no banco: cria, atualiza, inativa e remove. Ela e idempotente - o usuario criado leva um login unico por execucao, porque um usuario pertence a um unico colaborador e um login fixo colidiria em 409 na repeticao.\n\nLIMITE DE REPETICAO: o login tem rate limit de 5 por minuto por IP e a collection faz 3 logins. Duas execucoes seguidas passam (o 6o login e o de 'usuario inativo', que nao tem assercao). A terceira dentro do mesmo minuto recebe 429 ja no login que salva o token, e sem token o resto responde 401. Espere um minuto e ela volta a passar - o 429 e a defesa funcionando, nao defeito.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -430,8 +430,9 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"login\": \"novo.usuario\",\n  \"senha\": \"senha123\",\n  \"ativo\": true\n}"
-            }
+              "raw": "{\n  \"login\": \"novo.usuario.{{$timestamp}}.{{$randomInt}}\",\n  \"senha\": \"senha123\",\n  \"ativo\": true\n}"
+            },
+            "description": "O login carrega variaveis dinamicas do Postman para que a collection possa rodar quantas vezes for preciso: um usuario pertence a um unico colaborador, entao um login fixo colidiria em 409 na segunda execucao e derrubaria tudo que depende do usuarioId."
           }
         },
         {
