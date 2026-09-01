@@ -4,7 +4,7 @@
 
 ![Portal em uso: inativar uma unidade e ver o cadastro de colaborador deixar de oferecê-la](docs/demo.gif)
 
-Gestão de usuários, colaboradores e unidades: uma API ASP.NET Core com portal Angular,
+Gestão de usuários, colaboradores e unidades: uma API ASP.NET Core MVC com portal Angular,
 cobrindo o CRUD das três entidades e a regra de que unidade inativa não recebe colaborador.
 
 > [!NOTE]
@@ -49,10 +49,17 @@ flowchart LR
     E --> F[(PostgreSQL\nDocker)]
 ```
 
-O requisito de **arquitetura MVC** é atendido pelo ASP.NET Core MVC: controllers fazem o
-papel de *controller*, entidades e DTOs o de *model*, e a *view* é o portal Angular
-consumindo JSON — a separação que o padrão pede, com a apresentação desacoplada em vez de
-renderizada no servidor. Sobre isso está a divisão em camadas.
+O requisito de **arquitetura MVC** é atendido pelo ASP.NET Core MVC — `AddControllers`,
+`ControllerBase`, roteamento por atributo e model binding: controllers fazem o papel de
+*controller* e entidades e DTOs o de *model*.
+
+A *view* é o portal Angular consumindo JSON, e isso não é uma licença: o mesmo enunciado
+pede Angular no front, o que torna a View renderizada no servidor impossível por construção.
+Num sistema com SPA, "MVC" só pode significar o MVC do framework — ler de outro jeito faria
+os dois requisitos se contradizerem.
+
+Sobre essa borda está a divisão em camadas, que é ortogonal: MVC organiza a apresentação,
+camadas organizam a dependência entre as partes.
 
 Quatro projetos, um por camada, com a dependência sempre apontando para dentro:
 `Infrastructure` implementa as interfaces declaradas em `Application`. Ficou de fora a
