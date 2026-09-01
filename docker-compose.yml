@@ -53,7 +53,10 @@ services:
     ports:
       - "4200:80"
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost/ >/dev/null || exit 1"]
+      # 127.0.0.1 e não localhost: o nginx escuta só em IPv4 e, dentro do contêiner, o
+      # localhost resolve para ::1 primeiro — a sonda falhava com "connection refused"
+      # enquanto o portal respondia normalmente de fora.
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/ >/dev/null || exit 1"]
       interval: 10s
       timeout: 3s
       retries: 5
