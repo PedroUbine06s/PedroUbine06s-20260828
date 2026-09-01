@@ -49,23 +49,18 @@ flowchart LR
     E --> F[(PostgreSQL\nDocker)]
 ```
 
-O requisito de **arquitetura MVC** é atendido pelo ASP.NET Core MVC — `AddControllers`,
-`ControllerBase`, roteamento por atributo e model binding: controllers fazem o papel de
-*controller* e entidades e DTOs o de *model*.
+O requisito de **arquitetura MVC** é atendido pela camada de apresentação: `AddControllers`,
+`ControllerBase`, `MapControllers`, roteamento por atributo e model binding, com a validação
+do FluentValidation rodando dentro do próprio pipeline do MVC.
 
-A *view* é o portal Angular consumindo JSON, e isso não é uma licença: o mesmo enunciado
-pede Angular no front, o que torna a View renderizada no servidor impossível por construção.
-Num sistema com SPA, "MVC" só pode significar o MVC do framework — ler de outro jeito faria
-os dois requisitos se contradizerem.
+Como o front é Angular, a *view* é a resposta JSON, e não Razor. Os *models* — entidades e
+DTOs — e a lógica de aplicação estão em projetos separados em vez de pastas: é a mesma
+separação de responsabilidades do MVC clássico, com as dependências apontando para dentro.
 
-Sobre essa borda está a divisão em camadas, que é ortogonal: MVC organiza a apresentação,
-camadas organizam a dependência entre as partes.
-
-Quatro projetos, um por camada, com a dependência sempre apontando para dentro:
-`Infrastructure` implementa as interfaces declaradas em `Application`. Ficou de fora a
-subdivisão que Clean Architecture costuma trazer junto — projetos separados para casos de
-uso, contratos e adaptadores —, que num domínio de 3 entidades multiplicaria arquivos sem
-mudar nada.
+São quatro projetos, um por camada, e é `Infrastructure` que implementa as interfaces
+declaradas em `Application`. Ficou de fora a subdivisão que Clean Architecture costuma trazer
+junto — projetos separados para casos de uso, contratos e adaptadores —, que num domínio de
+3 entidades multiplicaria arquivos sem mudar nada.
 
 ## Patterns aplicados
 
