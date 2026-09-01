@@ -1,6 +1,6 @@
 # Sistema de Gestão de Colaboradores e Unidades
 
-![Portal em uso: login, listagem de colaboradores e edição com feedback da API](docs/demo.gif)
+![Portal em uso: inativar uma unidade e ver o cadastro de colaborador deixar de oferecê-la](docs/demo.gif)
 
 Gestão de usuários, colaboradores e unidades: uma API ASP.NET Core com portal Angular,
 cobrindo o CRUD das três entidades e a regra de que unidade inativa não recebe colaborador.
