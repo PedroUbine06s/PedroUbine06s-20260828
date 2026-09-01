@@ -6,9 +6,9 @@ import { LoadingModule } from 'carbon-components-angular/loading';
 import { Colaborador, Pagina } from '../../core/models/modelos';
 import { NotificacaoService } from '../../core/services/notificacao.service';
 import { ConfirmacaoComponent } from '../../shared/confirmacao.component';
-import { PaginacaoComponent } from '../../shared/paginacao.component';
+import { MudancaDePagina, PaginacaoComponent } from '../../shared/paginacao.component';
 import { ColaboradorFormComponent } from './colaborador-form.component';
-import { paginaDaUrl } from '../../core/services/parametros';
+import { paginaDaUrl, tamanhoDaUrl, TAMANHO_PADRAO } from '../../core/services/parametros';
 import { ColaboradoresService } from './colaboradores.service';
 
 @Component({
@@ -67,9 +67,9 @@ import { ColaboradoresService } from './colaboradores.service';
 
       <app-paginacao
         [pagina]="dados()!.pagina"
-        [tamanho]="dados()!.tamanho"
+        [tamanho]="tamanho()"
         [total]="dados()!.total"
-        (mudarPagina)="irParaPagina($event)"
+        (mudou)="aoMudarPaginacao($event)"
       />
     }
 
@@ -146,6 +146,9 @@ export class ColaboradoresListaComponent {
    */
   readonly pagina = computed(() => paginaDaUrl(this.parametros().get('pagina')));
 
+  /** O tamanho também vive na URL, senão trocá-lo se perderia ao virar a página. */
+  readonly tamanho = computed(() => tamanhoDaUrl(this.parametros().get('tamanho')));
+
   readonly formAberto = signal(false);
   readonly emEdicao = signal<Colaborador | null>(null);
 
@@ -158,19 +161,23 @@ export class ColaboradoresListaComponent {
     // Recarrega sempre que a página da URL muda — inclusive pelo botão voltar.
     effect(() => {
       this.pagina();
+      this.tamanho();
       this.carregar();
     });
   }
 
-  irParaPagina(pagina: number): void {
-    this.navegarParaPagina(pagina);
+  aoMudarPaginacao({ pagina, tamanho }: MudancaDePagina): void {
+    this.navegarParaPagina(pagina, tamanho);
   }
 
-  /** Página 1 sai da URL para não sujar o link com o valor padrão. */
-  private navegarParaPagina(pagina: number): void {
+  /** Página 1 e tamanho padrão saem da URL, para não sujar o link com o que já é padrão. */
+  private navegarParaPagina(pagina: number, tamanho = this.tamanho()): void {
     this.router.navigate([], {
       relativeTo: this.route,
-      queryParams: { pagina: pagina === 1 ? null : pagina },
+      queryParams: {
+        pagina: pagina === 1 ? null : pagina,
+        tamanho: tamanho === TAMANHO_PADRAO ? null : tamanho
+      },
       queryParamsHandling: 'merge'
     });
   }
@@ -229,7 +236,7 @@ export class ColaboradoresListaComponent {
   private carregar(): void {
     this.carregando.set(true);
 
-    this.service.listar({ pagina: this.pagina() }).subscribe({
+    this.service.listar({ pagina: this.pagina(), tamanho: this.tamanho() }).subscribe({
       next: pagina => {
         this.dados.set(pagina);
         this.carregando.set(false);

@@ -5,10 +5,10 @@ import { ButtonModule } from 'carbon-components-angular/button';
 import { LoadingModule } from 'carbon-components-angular/loading';
 import { Pagina, Unidade } from '../../core/models/modelos';
 import { NotificacaoService } from '../../core/services/notificacao.service';
-import { PaginacaoComponent } from '../../shared/paginacao.component';
+import { MudancaDePagina, PaginacaoComponent } from '../../shared/paginacao.component';
 import { StatusBadgeComponent } from '../../shared/status-badge.component';
 import { UnidadeFormComponent } from './unidade-form.component';
-import { paginaDaUrl } from '../../core/services/parametros';
+import { paginaDaUrl, tamanhoDaUrl, TAMANHO_PADRAO } from '../../core/services/parametros';
 import { UnidadesService } from './unidades.service';
 
 @Component({
@@ -104,9 +104,9 @@ import { UnidadesService } from './unidades.service';
 
       <app-paginacao
         [pagina]="dados()!.pagina"
-        [tamanho]="dados()!.tamanho"
+        [tamanho]="tamanho()"
         [total]="dados()!.total"
-        (mudarPagina)="irParaPagina($event)"
+        (mudou)="aoMudarPaginacao($event)"
       />
     }
 
@@ -203,6 +203,9 @@ export class UnidadesListaComponent {
   /** A página vive na URL: F5 e o botão voltar preservam o lugar na listagem. */
   readonly pagina = computed(() => paginaDaUrl(this.parametros().get('pagina')));
 
+  /** O tamanho também vive na URL, senão trocá-lo se perderia ao virar a página. */
+  readonly tamanho = computed(() => tamanhoDaUrl(this.parametros().get('tamanho')));
+
   /** Id da unidade com a linha de colaboradores aberta, se houver. */
   readonly expandida = signal<string | null>(null);
   readonly alternandoStatus = signal<string | null>(null);
@@ -215,6 +218,7 @@ export class UnidadesListaComponent {
   constructor() {
     effect(() => {
       this.pagina();
+      this.tamanho();
       this.carregar();
     });
   }
@@ -223,10 +227,14 @@ export class UnidadesListaComponent {
     this.expandida.update(atual => (atual === id ? null : id));
   }
 
-  irParaPagina(pagina: number): void {
+  /** Página 1 e tamanho padrão saem da URL, para não sujar o link com o que já é padrão. */
+  aoMudarPaginacao({ pagina, tamanho }: MudancaDePagina): void {
     this.router.navigate([], {
       relativeTo: this.route,
-      queryParams: { pagina: pagina === 1 ? null : pagina },
+      queryParams: {
+        pagina: pagina === 1 ? null : pagina,
+        tamanho: tamanho === TAMANHO_PADRAO ? null : tamanho
+      },
       queryParamsHandling: 'merge'
     });
   }
@@ -272,7 +280,7 @@ export class UnidadesListaComponent {
   private carregar(): void {
     this.carregando.set(true);
 
-    this.service.listar({ pagina: this.pagina() }).subscribe({
+    this.service.listar({ pagina: this.pagina(), tamanho: this.tamanho() }).subscribe({
       next: pagina => {
         this.dados.set(pagina);
         this.carregando.set(false);

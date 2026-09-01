@@ -1,21 +1,27 @@
-import { Component, computed, input, output } from '@angular/core';
+import { Component, effect, input, output } from '@angular/core';
 import { PaginationModel, PaginationModule } from 'carbon-components-angular/pagination';
+
+/** O que a listagem precisa saber quando a pessoa mexe na paginação. */
+export interface MudancaDePagina {
+  pagina: number;
+  tamanho: number;
+}
 
 /**
  * Rodapé de paginação.
  *
- * O cds-pagination do Carbon recebe um PaginationModel — um objeto mutável.
- * Aqui ele é reconstruído por um computed a partir dos signals de entrada,
- * para que a fonte da verdade continue sendo o estado da tela, e não o
- * objeto que a biblioteca guarda por dentro.
+ * O cds-pagination recebe um PaginationModel, que é um objeto mutável — e ao trocar o
+ * tamanho da página o Carbon escreve nele e só então emite selectPage. Por isso o modelo
+ * aqui é uma instância estável, sincronizada por efeito: recriá-lo a cada leitura, como um
+ * computed faria, descartaria justamente a escrita que carrega o tamanho novo.
  */
 @Component({
   selector: 'app-paginacao',
   imports: [PaginationModule],
   template: `
-    <!-- Sempre visível, mesmo com uma página só: ela mostra o total de itens e o seletor
-         de tamanho. Escondida, dava a impressão de que a listagem não era paginada. -->
-    <cds-pagination [model]="modelo()" (selectPage)="mudarPagina.emit($event)" />
+    <!-- Sempre visível, mesmo com uma página só: mostra o total de itens e o seletor de
+         tamanho. Escondida, dava a impressão de que a listagem não era paginada. -->
+    <cds-pagination [model]="modelo" (selectPage)="aoSelecionar($event)" />
   `
 })
 export class PaginacaoComponent {
@@ -23,14 +29,21 @@ export class PaginacaoComponent {
   readonly tamanho = input.required<number>();
   readonly total = input.required<number>();
 
-  readonly mudarPagina = output<number>();
+  readonly mudou = output<MudancaDePagina>();
 
-  readonly modelo = computed(() => {
-    const modelo = new PaginationModel();
-    modelo.currentPage = this.pagina();
-    modelo.pageLength = this.tamanho();
-    modelo.totalDataLength = this.total();
+  readonly modelo = new PaginationModel();
 
-    return modelo;
-  });
+  constructor() {
+    effect(() => {
+      this.modelo.currentPage = this.pagina();
+      this.modelo.pageLength = this.tamanho();
+      this.modelo.totalDataLength = this.total();
+    });
+  }
+
+  aoSelecionar(pagina: number): void {
+    // O tamanho vem do modelo, não da entrada: quando a mudança foi no seletor de itens por
+    // página, é lá que o valor novo está — a entrada ainda reflete a requisição anterior.
+    this.mudou.emit({ pagina, tamanho: this.modelo.pageLength ?? this.tamanho() });
+  }
 }

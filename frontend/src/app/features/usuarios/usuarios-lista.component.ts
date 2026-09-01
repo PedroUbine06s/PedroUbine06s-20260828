@@ -4,10 +4,10 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { ButtonModule } from 'carbon-components-angular/button';
 import { LoadingModule } from 'carbon-components-angular/loading';
 import { Pagina, Usuario } from '../../core/models/modelos';
-import { PaginacaoComponent } from '../../shared/paginacao.component';
+import { MudancaDePagina, PaginacaoComponent } from '../../shared/paginacao.component';
 import { StatusBadgeComponent } from '../../shared/status-badge.component';
 import { UsuarioFormComponent } from './usuario-form.component';
-import { paginaDaUrl } from '../../core/services/parametros';
+import { paginaDaUrl, tamanhoDaUrl, TAMANHO_PADRAO } from '../../core/services/parametros';
 import { UsuariosService } from './usuarios.service';
 
 type Filtro = 'todos' | 'ativos' | 'inativos';
@@ -71,9 +71,9 @@ type Filtro = 'todos' | 'ativos' | 'inativos';
 
       <app-paginacao
         [pagina]="dados()!.pagina"
-        [tamanho]="dados()!.tamanho"
+        [tamanho]="tamanho()"
         [total]="dados()!.total"
-        (mudarPagina)="irParaPagina($event)"
+        (mudou)="aoMudarPaginacao($event)"
       />
     }
 
@@ -140,6 +140,9 @@ export class UsuariosListaComponent {
   /** Página e filtro vivem na URL: a listagem filtrada vira um link compartilhável. */
   readonly pagina = computed(() => paginaDaUrl(this.parametros().get('pagina')));
 
+  /** O tamanho também vive na URL, senão trocá-lo se perderia ao virar a página. */
+  readonly tamanho = computed(() => tamanhoDaUrl(this.parametros().get('tamanho')));
+
   readonly filtro = computed<Filtro>(() => {
     const valor = this.parametros().get('status');
 
@@ -154,6 +157,7 @@ export class UsuariosListaComponent {
   constructor() {
     effect(() => {
       this.pagina();
+      this.tamanho();
       this.filtro();
       this.carregar();
     });
@@ -164,8 +168,12 @@ export class UsuariosListaComponent {
     this.navegar({ status: filtro === 'todos' ? null : filtro, pagina: null });
   }
 
-  irParaPagina(pagina: number): void {
-    this.navegar({ pagina: pagina === 1 ? null : pagina });
+  /** Página 1 e tamanho padrão saem da URL, para não sujar o link com o que já é padrão. */
+  aoMudarPaginacao({ pagina, tamanho }: MudancaDePagina): void {
+    this.navegar({
+      pagina: pagina === 1 ? null : pagina,
+      tamanho: tamanho === TAMANHO_PADRAO ? null : tamanho
+    });
   }
 
   private navegar(queryParams: Record<string, string | number | null>): void {
@@ -203,7 +211,7 @@ export class UsuariosListaComponent {
     // 'todos' omite o parâmetro: a API só filtra quando ?ativo= é enviado.
     const ativo = filtro === 'todos' ? undefined : filtro === 'ativos';
 
-    this.service.listar({ ativo, pagina: this.pagina() }).subscribe({
+    this.service.listar({ ativo, pagina: this.pagina(), tamanho: this.tamanho() }).subscribe({
       next: pagina => {
         this.dados.set(pagina);
         this.carregando.set(false);

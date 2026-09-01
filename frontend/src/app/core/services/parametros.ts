@@ -25,3 +25,17 @@ export function paginaDaUrl(valor: string | null): number {
 
   return Number.isInteger(numero) && numero > 0 ? numero : 1;
 }
+
+/** Tamanhos que o seletor do Carbon oferece. O teto da API é 100. */
+const TAMANHOS_VALIDOS = [10, 20, 30, 40, 50];
+export const TAMANHO_PADRAO = 20;
+
+/**
+ * Lê o tamanho de página vindo da URL. Valor fora da lista cai no padrão: a URL é digitável,
+ * e um tamanho que o seletor não oferece deixaria o controle sem opção correspondente.
+ */
+export function tamanhoDaUrl(valor: string | null): number {
+  const numero = Number(valor);
+
+  return TAMANHOS_VALIDOS.includes(numero) ? numero : TAMANHO_PADRAO;
+}
