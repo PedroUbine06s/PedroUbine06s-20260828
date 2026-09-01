@@ -1,0 +1,11 @@
+# O repositório guarda LF. Sem esta linha, o core.autocrlf do Windows entrega CRLF no
+# checkout e o Prettier, que espera LF, acusa arquivos fora de padrão que ninguém tocou —
+# enquanto o CI, em Linux, passa. A divergência faz `npm run format` reescrever dezenas de
+# arquivos e produzir um diff fantasma, sem mudança de conteúdo nenhuma.
+* text=auto eol=lf
+
+# Binários não passam por conversão.
+*.gif binary
+*.png binary
+*.jpg binary
+*.ico binary
