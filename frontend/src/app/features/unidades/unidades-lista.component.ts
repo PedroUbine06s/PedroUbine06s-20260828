@@ -31,80 +31,81 @@ import { UnidadesService } from './unidades.service';
     } @else if (unidades().length === 0) {
       <p class="vazio">Nenhuma unidade cadastrada.</p>
     } @else {
-      <table class="cds--data-table cds--data-table--md">
-        <thead>
-          <tr>
-            <th><span class="cds--table-header-label">Código</span></th>
-            <th><span class="cds--table-header-label">Nome</span></th>
-            <th><span class="cds--table-header-label">Status</span></th>
-            <th><span class="cds--table-header-label">Colaboradores</span></th>
-            <th><span class="cds--table-header-label">Ações</span></th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (u of unidades(); track u.id) {
+      <div class="rolagem">
+        <table class="cds--data-table cds--data-table--md">
+          <thead>
             <tr>
-              <td>{{ u.codigo }}</td>
-              <td>{{ u.nome }}</td>
-              <td><app-status-badge [ativo]="u.ativo" /></td>
-              <td>
-                <!-- O rótulo em palavras é o que faz a expansão ser descoberta; o chevron
+              <th><span class="cds--table-header-label">Código</span></th>
+              <th><span class="cds--table-header-label">Nome</span></th>
+              <th><span class="cds--table-header-label">Status</span></th>
+              <th><span class="cds--table-header-label">Colaboradores</span></th>
+              <th><span class="cds--table-header-label">Ações</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (u of unidades(); track u.id) {
+              <tr>
+                <td>{{ u.codigo }}</td>
+                <td>{{ u.nome }}</td>
+                <td><app-status-badge [ativo]="u.ativo" /></td>
+                <td>
+                  <!-- O rótulo em palavras é o que faz a expansão ser descoberta; o chevron
                      sozinho não dizia que ali havia uma ação. Sem colaboradores não há o
                      que expandir, então vira texto simples. -->
-                @if (u.colaboradores.length > 0) {
-                  <button
-                    class="expandir"
-                    type="button"
-                    [attr.aria-expanded]="expandida() === u.id"
-                    (click)="alternarExpansao(u.id)"
-                  >
-                    <span class="chevron" [class.aberto]="expandida() === u.id">⌄</span>
-                    {{ u.colaboradores.length }}
-                    {{ u.colaboradores.length === 1 ? 'colaborador' : 'colaboradores' }}
-                  </button>
-                } @else {
-                  <span class="vazio">nenhum colaborador</span>
-                }
-              </td>
-              <td class="acoes">
-                <button cdsButton="ghost" size="sm" (click)="abrirEdicao(u)">Editar</button>
-                <button
-                  cdsButton="ghost"
-                  size="sm"
-                  [disabled]="alternandoStatus() === u.id"
-                  (click)="alternarStatus(u)"
-                >
-                  {{ u.ativo ? 'Inativar' : 'Ativar' }}
-                </button>
-              </td>
-            </tr>
-
-            @if (expandida() === u.id) {
-              <tr class="linha-detalhe">
-                <td colspan="5">
-                  @if (u.colaboradores.length === 0) {
-                    <p class="vazio">Esta unidade não tem colaboradores.</p>
+                  @if (u.colaboradores.length > 0) {
+                    <button
+                      class="expandir"
+                      type="button"
+                      [attr.aria-expanded]="expandida() === u.id"
+                      (click)="alternarExpansao(u.id)"
+                    >
+                      <span class="chevron" [class.aberto]="expandida() === u.id">⌄</span>
+                      {{ u.colaboradores.length }}
+                      {{ u.colaboradores.length === 1 ? 'colaborador' : 'colaboradores' }}
+                    </button>
                   } @else {
-                    <ul class="colaboradores">
-                      @for (c of u.colaboradores; track c.id) {
-                        <li>
-                          <strong>{{ c.codigo }}</strong> — {{ c.nome }}
-                        </li>
-                      }
-                    </ul>
+                    <span class="vazio">nenhum colaborador</span>
                   }
                 </td>
+                <td class="acoes">
+                  <button cdsButton="ghost" size="sm" (click)="abrirEdicao(u)">Editar</button>
+                  <button
+                    cdsButton="ghost"
+                    size="sm"
+                    [disabled]="alternandoStatus() === u.id"
+                    (click)="alternarStatus(u)"
+                  >
+                    {{ u.ativo ? 'Inativar' : 'Ativar' }}
+                  </button>
+                </td>
               </tr>
+
+              @if (expandida() === u.id) {
+                <tr class="linha-detalhe">
+                  <td colspan="5">
+                    @if (u.colaboradores.length === 0) {
+                      <p class="vazio">Esta unidade não tem colaboradores.</p>
+                    } @else {
+                      <ul class="colaboradores">
+                        @for (c of u.colaboradores; track c.id) {
+                          <li>
+                            <strong>{{ c.codigo }}</strong> — {{ c.nome }}
+                          </li>
+                        }
+                      </ul>
+                    }
+                  </td>
+                </tr>
+              }
             }
-          }
-        </tbody>
-      </table>
+          </tbody>
+        </table>
+      </div>
 
       <app-paginacao
         [pagina]="dados()!.pagina"
         [tamanho]="dados()!.tamanho"
         [total]="dados()!.total"
-        [totalDePaginas]="dados()!.totalDePaginas"
         (mudarPagina)="irParaPagina($event)"
       />
     }
@@ -174,8 +175,14 @@ import { UnidadesService } from './unidades.service';
       display: grid;
       gap: 0.25rem;
     }
+    /* A tabela rola dentro do próprio container em telas estreitas. Sem isto, ela
+       empurra a página inteira e o cabeçalho e o título saem da vista. */
+    .rolagem {
+      overflow-x: auto;
+    }
     table {
       width: 100%;
+      min-width: 34rem;
     }
   `
 })

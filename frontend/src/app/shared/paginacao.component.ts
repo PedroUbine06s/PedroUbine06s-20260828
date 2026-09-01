@@ -13,16 +13,15 @@ import { PaginationModel, PaginationModule } from 'carbon-components-angular/pag
   selector: 'app-paginacao',
   imports: [PaginationModule],
   template: `
-    @if (totalDePaginas() > 1) {
-      <cds-pagination [model]="modelo()" (selectPage)="mudarPagina.emit($event)" />
-    }
+    <!-- Sempre visível, mesmo com uma página só: ela mostra o total de itens e o seletor
+         de tamanho. Escondida, dava a impressão de que a listagem não era paginada. -->
+    <cds-pagination [model]="modelo()" (selectPage)="mudarPagina.emit($event)" />
   `
 })
 export class PaginacaoComponent {
   readonly pagina = input.required<number>();
   readonly tamanho = input.required<number>();
   readonly total = input.required<number>();
-  readonly totalDePaginas = input.required<number>();
 
   readonly mudarPagina = output<number>();
 

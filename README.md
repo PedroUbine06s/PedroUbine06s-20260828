@@ -34,6 +34,7 @@ cada requisito seja testável sem preparo:
 | Unidade **Filial Centro** | **inativa**, 1 colaborador | **422** ao incluir novo colaborador, e que inativar não desvincula quem já estava |
 | Usuário **admin** | ativo | login (`admin` / `admin123`) |
 | Usuário **carlos.lima** | **inativo** | filtro `?ativo=false` e recusa de login |
+| **23 usuários** no total | 3 inativos, 18 sem colaborador | a listagem passa de uma página, então a **paginação** aparece de fato |
 
 Os demais usuários usam a senha `senha123`. Os códigos (`USR000001`, `UNI000001`,
 `COL000001`) são gerados pelo sistema — liste os recursos para descobrir os Ids.

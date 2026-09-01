@@ -32,6 +32,28 @@ public static class DbSeeder
 
         context.Usuarios.AddRange(admin, usuarioMaria, usuarioJoao, usuarioAna, usuarioCarlos);
 
+        // Equipe adicional para a listagem passar de uma página: o padrão é 20 por página, e
+        // com meia dúzia de registros a paginação existiria sem nunca aparecer na tela. Nenhum
+        // deles tem colaborador, então também servem de opção no cadastro de colaborador.
+        string[] equipe =
+        [
+            "beatriz.rocha", "bruno.almeida", "camila.duarte", "diego.ferreira",
+            "elaine.moraes", "fabio.tavares", "gabriela.pinto", "henrique.barros",
+            "isabela.nunes", "juliano.castro", "larissa.gomes", "marcelo.freitas",
+            "natalia.ribeiro", "otavio.machado", "patricia.lopes", "rodrigo.santana"
+        ];
+
+        foreach (var login in equipe)
+            context.Usuarios.Add(Usuario.Criar(await Codigo(TipoCodigo.Usuario), login, hasher.Hash("senha123")));
+
+        // Mais dois inativos, para o filtro ?ativo=false devolver uma lista e não uma linha só.
+        foreach (var login in new[] { "sergio.antunes", "vanessa.lima" })
+        {
+            var inativo = Usuario.Criar(await Codigo(TipoCodigo.Usuario), login, hasher.Hash("senha123"));
+            inativo.Inativar();
+            context.Usuarios.Add(inativo);
+        }
+
         // --- Unidades ---------------------------------------------------------------
         var matriz = Unidade.Criar(await Codigo(TipoCodigo.Unidade), "Matriz");
         var filial = Unidade.Criar(await Codigo(TipoCodigo.Unidade), "Filial Centro");

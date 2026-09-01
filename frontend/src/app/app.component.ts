@@ -1,4 +1,4 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { filter, map } from 'rxjs';
@@ -18,6 +18,11 @@ import { NotificacoesComponent } from './shared/notificacoes.component';
         [route]="['/colaboradores']"
         [useRouter]="true"
       >
+        <!-- O Carbon esconde a navegação abaixo de 66rem e espera que ela apareça dentro
+             do side nav. O hambúrguer é quem abre; a própria lib o esconde nas telas largas,
+             onde a navegação do cabeçalho já aparece. -->
+        <cds-hamburger [active]="menuAberto()" (selected)="menuAberto.update(aberto => !aberto)" />
+
         <cds-header-navigation>
           @for (item of navegacao; track item.rota) {
             <!-- activeLinkClass não tem valor padrão no cds-header-item e é repassado
@@ -38,6 +43,23 @@ import { NotificacoesComponent } from './shared/notificacoes.component';
           <button class="cds--header__action" type="button" (click)="sair()">Sair</button>
         </cds-header-global>
       </cds-header>
+
+      <!-- Mesma lista de rotas, para telas estreitas. Fechar ao navegar é obrigatório: o
+           roteamento não recarrega a página, então o painel ficaria aberto por cima. -->
+      <!-- hidden fecha o trilho recolhido de 48px que o Carbon deixa por cima do
+           conteúdo quando o painel está fechado. -->
+      <cds-sidenav [expanded]="menuAberto()" [hidden]="!menuAberto()">
+        @for (item of navegacao; track item.rota) {
+          <cds-sidenav-item
+            [route]="[item.rota]"
+            [useRouter]="true"
+            [active]="rotaAtiva() === item.rota"
+            (click)="menuAberto.set(false)"
+          >
+            {{ item.rotulo }}
+          </cds-sidenav-item>
+        }
+      </cds-sidenav>
     }
 
     <app-notificacoes />
@@ -68,6 +90,9 @@ import { NotificacoesComponent } from './shared/notificacoes.component';
 export class AppComponent {
   readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+
+  /** Só tem efeito abaixo de 66rem, onde a navegação do cabeçalho fica escondida. */
+  readonly menuAberto = signal(false);
 
   readonly navegacao = [
     { rota: '/colaboradores', rotulo: 'Colaboradores' },

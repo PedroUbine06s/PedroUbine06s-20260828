@@ -31,43 +31,44 @@ import { ColaboradoresService } from './colaboradores.service';
     } @else if (colaboradores().length === 0) {
       <p class="vazio">Nenhum colaborador cadastrado.</p>
     } @else {
-      <table class="cds--data-table cds--data-table--md">
-        <thead>
-          <tr>
-            <th><span class="cds--table-header-label">Código</span></th>
-            <th><span class="cds--table-header-label">Nome</span></th>
-            <th><span class="cds--table-header-label">Unidade</span></th>
-            <th><span class="cds--table-header-label">Usuário</span></th>
-            <th><span class="cds--table-header-label">Ações</span></th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (c of colaboradores(); track c.id) {
+      <div class="rolagem">
+        <table class="cds--data-table cds--data-table--md">
+          <thead>
             <tr>
-              <td>{{ c.codigo }}</td>
-              <td>{{ c.nome }}</td>
-              <td>
-                {{ c.nomeUnidade }} <span class="codigo">{{ c.codigoUnidade }}</span>
-              </td>
-              <td>
-                {{ c.loginUsuario }} <span class="codigo">{{ c.codigoUsuario }}</span>
-              </td>
-              <td class="acoes">
-                <button cdsButton="ghost" size="sm" (click)="abrirEdicao(c)">Editar</button>
-                <button cdsButton="danger--ghost" size="sm" (click)="pedirRemocao(c)">
-                  Remover
-                </button>
-              </td>
+              <th><span class="cds--table-header-label">Código</span></th>
+              <th><span class="cds--table-header-label">Nome</span></th>
+              <th><span class="cds--table-header-label">Unidade</span></th>
+              <th><span class="cds--table-header-label">Usuário</span></th>
+              <th><span class="cds--table-header-label">Ações</span></th>
             </tr>
-          }
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            @for (c of colaboradores(); track c.id) {
+              <tr>
+                <td>{{ c.codigo }}</td>
+                <td>{{ c.nome }}</td>
+                <td>
+                  {{ c.nomeUnidade }} <span class="codigo">{{ c.codigoUnidade }}</span>
+                </td>
+                <td>
+                  {{ c.loginUsuario }} <span class="codigo">{{ c.codigoUsuario }}</span>
+                </td>
+                <td class="acoes">
+                  <button cdsButton="ghost" size="sm" (click)="abrirEdicao(c)">Editar</button>
+                  <button cdsButton="danger--ghost" size="sm" (click)="pedirRemocao(c)">
+                    Remover
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
 
       <app-paginacao
         [pagina]="dados()!.pagina"
         [tamanho]="dados()!.tamanho"
         [total]="dados()!.total"
-        [totalDePaginas]="dados()!.totalDePaginas"
         (mudarPagina)="irParaPagina($event)"
       />
     }
@@ -114,8 +115,14 @@ import { ColaboradoresService } from './colaboradores.service';
       color: var(--cds-text-secondary, #525252);
       font-size: 0.75rem;
     }
+    /* A tabela rola dentro do próprio container em telas estreitas. Sem isto, ela
+       empurra a página inteira e o cabeçalho e o título saem da vista. */
+    .rolagem {
+      overflow-x: auto;
+    }
     table {
       width: 100%;
+      min-width: 34rem;
     }
   `
 })

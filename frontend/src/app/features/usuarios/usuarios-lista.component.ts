@@ -44,34 +44,35 @@ type Filtro = 'todos' | 'ativos' | 'inativos';
     } @else if (usuarios().length === 0) {
       <p class="vazio">Nenhum usuário encontrado para este filtro.</p>
     } @else {
-      <table class="cds--data-table cds--data-table--md">
-        <thead>
-          <tr>
-            <th><span class="cds--table-header-label">Código</span></th>
-            <th><span class="cds--table-header-label">Login</span></th>
-            <th><span class="cds--table-header-label">Status</span></th>
-            <th><span class="cds--table-header-label">Ações</span></th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (u of usuarios(); track u.id) {
+      <div class="rolagem">
+        <table class="cds--data-table cds--data-table--md">
+          <thead>
             <tr>
-              <td>{{ u.codigo }}</td>
-              <td>{{ u.login }}</td>
-              <td><app-status-badge [ativo]="u.ativo" /></td>
-              <td>
-                <button cdsButton="ghost" size="sm" (click)="abrirEdicao(u)">Editar</button>
-              </td>
+              <th><span class="cds--table-header-label">Código</span></th>
+              <th><span class="cds--table-header-label">Login</span></th>
+              <th><span class="cds--table-header-label">Status</span></th>
+              <th><span class="cds--table-header-label">Ações</span></th>
             </tr>
-          }
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            @for (u of usuarios(); track u.id) {
+              <tr>
+                <td>{{ u.codigo }}</td>
+                <td>{{ u.login }}</td>
+                <td><app-status-badge [ativo]="u.ativo" /></td>
+                <td>
+                  <button cdsButton="ghost" size="sm" (click)="abrirEdicao(u)">Editar</button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
 
       <app-paginacao
         [pagina]="dados()!.pagina"
         [tamanho]="dados()!.tamanho"
         [total]="dados()!.total"
-        [totalDePaginas]="dados()!.totalDePaginas"
         (mudarPagina)="irParaPagina($event)"
       />
     }
@@ -106,8 +107,14 @@ type Filtro = 'todos' | 'ativos' | 'inativos';
     .vazio {
       color: var(--cds-text-secondary, #525252);
     }
+    /* A tabela rola dentro do próprio container em telas estreitas. Sem isto, ela
+       empurra a página inteira e o cabeçalho e o título saem da vista. */
+    .rolagem {
+      overflow-x: auto;
+    }
     table {
       width: 100%;
+      min-width: 34rem;
     }
   `
 })

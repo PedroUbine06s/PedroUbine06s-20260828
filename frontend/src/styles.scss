@@ -6,3 +6,25 @@
 * {
   box-sizing: border-box;
 }
+
+/* Os itens do side nav não têm ícone, e sem ele o Carbon deixa o rótulo espremido em 96px,
+   cortando "Colaboradores" com reticências. Some com a caixa vazia do ícone e devolve a
+   largura ao texto. */
+.cds--side-nav__icon:empty {
+  display: none;
+}
+
+.cds--side-nav__link-text {
+  max-width: none;
+  overflow: visible;
+}
+
+/* O Carbon não esconde o hambúrguer sozinho, porque em outros desenhos ele serve também em
+   telas grandes. Aqui a navegação do cabeçalho reaparece exatamente em 66rem — o mesmo ponto
+   em que a lib volta a mostrá-la —, então acima disso o botão seria um segundo caminho para
+   o mesmo lugar. */
+@media (min-width: 66rem) {
+  .cds--header__menu-trigger {
+    display: none;
+  }
+}
