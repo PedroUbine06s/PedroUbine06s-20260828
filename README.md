@@ -47,6 +47,11 @@ flowchart LR
     E --> F[(PostgreSQL\nDocker)]
 ```
 
+O requisito de **arquitetura MVC** é atendido pelo ASP.NET Core MVC: controllers fazem o
+papel de *controller*, entidades e DTOs o de *model*, e a *view* é o portal Angular
+consumindo JSON — a separação que o padrão pede, com a apresentação desacoplada em vez de
+renderizada no servidor. Sobre isso está a divisão em camadas.
+
 Quatro projetos, um por camada, com a dependência sempre apontando para dentro:
 `Infrastructure` implementa as interfaces declaradas em `Application`. Ficou de fora a
 subdivisão que Clean Architecture costuma trazer junto — projetos separados para casos de
