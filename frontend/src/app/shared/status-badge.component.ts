@@ -1,7 +1,6 @@
 import { Component, computed, input } from '@angular/core';
 import { TagModule } from 'carbon-components-angular/tag';
 
-/** Badge de status usado em todas as listagens. */
 @Component({
   selector: 'app-status-badge',
   imports: [TagModule],

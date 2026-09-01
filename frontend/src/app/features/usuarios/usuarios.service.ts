@@ -31,7 +31,7 @@ export class UsuariosService {
     return this.http.get<Usuario>(`${this.base}/${id}`);
   }
 
-  /** O código é gerado pelo sistema (USR000001). Senha mínima de 8 caracteres. */
+  /** Senha mínima de 8 caracteres, validada também no servidor. */
   criar(dto: CriarUsuario): Observable<Usuario> {
     return this.http.post<Usuario>(this.base, dto);
   }

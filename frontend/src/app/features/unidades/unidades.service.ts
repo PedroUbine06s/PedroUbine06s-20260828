@@ -25,7 +25,6 @@ export class UnidadesService {
     return this.http.get<Unidade>(`${this.base}/${id}`);
   }
 
-  /** O código é gerado pelo sistema (UNI000001). */
   criar(dto: CriarUnidade): Observable<Unidade> {
     return this.http.post<Unidade>(this.base, dto);
   }

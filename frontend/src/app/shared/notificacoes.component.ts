@@ -2,7 +2,6 @@ import { Component, inject } from '@angular/core';
 import { NotificationModule } from 'carbon-components-angular/notification';
 import { NotificacaoService } from '../core/services/notificacao.service';
 
-/** Pilha de toasts do Carbon, alimentada pelo NotificacaoService. */
 @Component({
   selector: 'app-notificacoes',
   imports: [NotificationModule],
