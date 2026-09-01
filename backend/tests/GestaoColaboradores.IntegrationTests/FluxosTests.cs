@@ -246,6 +246,47 @@ public class FluxosTests(ApiFactory factory) : IClassFixture<ApiFactory>
         resposta.EnsureSuccessStatusCode();
     }
 
+    /// <summary>
+    /// Todo colaborador tem um usuário, e a resposta o expõe para que a relação exigida pelo
+    /// enunciado seja verificável pela própria API — sem arrastar credencial junto.
+    /// </summary>
+    [Fact]
+    public async Task ListarColaboradores_TrazUsuarioVinculado_SemNuncaExporSenha()
+    {
+        var client = await factory.CriarClienteAutenticadoAsync();
+
+        var pagina = await client.GetFromJsonAsync<PaginaDto<ColaboradorRespostaDto>>(
+            "/api/v1/colaboradores?tamanho=100");
+
+        Assert.NotEmpty(pagina!.Itens);
+        Assert.All(pagina.Itens, c =>
+        {
+            Assert.NotEqual(Guid.Empty, c.UsuarioId);
+            Assert.False(string.IsNullOrWhiteSpace(c.LoginUsuario));
+            Assert.Matches("^USR[0-9]{6}$", c.CodigoUsuario);
+        });
+
+        var json = await client.GetStringAsync("/api/v1/colaboradores?tamanho=100");
+        Assert.DoesNotContain("senha", json, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("hash", json, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>A unidade aninha colaboradores, então o usuário precisa vir ali também.</summary>
+    [Fact]
+    public async Task ListarUnidades_ColaboradoresAninhadosTrazemOUsuario()
+    {
+        var client = await factory.CriarClienteAutenticadoAsync();
+
+        var pagina = await client.GetFromJsonAsync<PaginaDto<UnidadeComColaboradoresDto>>(
+            "/api/v1/unidades?tamanho=100");
+
+        var comColaboradores = pagina!.Itens.Where(u => u.Colaboradores.Count > 0).ToList();
+        Assert.NotEmpty(comColaboradores);
+        Assert.All(comColaboradores, u =>
+            Assert.All(u.Colaboradores, c =>
+                Assert.False(string.IsNullOrWhiteSpace(c.LoginUsuario))));
+    }
+
     [Fact]
     public async Task ListarUsuarios_NuncaExpoeSenha()
     {

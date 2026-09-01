@@ -155,5 +155,7 @@ public class ColaboradorService(
     }
 
     private static ColaboradorRespostaDto ParaDto(Colaborador c) =>
-        new(c.Id, c.Codigo, c.Nome, c.Unidade.Id, c.Unidade.Codigo, c.Unidade.Nome);
+        new(c.Id, c.Codigo, c.Nome,
+            c.Unidade.Id, c.Unidade.Codigo, c.Unidade.Nome,
+            c.Usuario.Id, c.Usuario.Codigo, c.Usuario.Login);
 }

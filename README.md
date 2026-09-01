@@ -133,7 +133,7 @@ Todos os demais endpoints exigem o token.
 | POST | `/api/v1/usuarios` | Cadastra usuário |
 | PUT | `/api/v1/usuarios/{id}` | Atualiza **somente** senha e status |
 | PATCH | `/api/v1/usuarios/{id}` | Atualização parcial |
-| GET | `/api/v1/colaboradores?pagina=&tamanho=` | Lista colaboradores com a unidade |
+| GET | `/api/v1/colaboradores?pagina=&tamanho=` | Lista colaboradores com a unidade e o usuário vinculado |
 | GET | `/api/v1/colaboradores/{id}` | Retorna um colaborador |
 | POST | `/api/v1/colaboradores` | Cadastra (409 duplicado / 422 unidade inativa) |
 | PUT | `/api/v1/colaboradores/{id}` | Atualiza nome e unidade |
@@ -173,19 +173,19 @@ repetição. Roda quantas vezes for preciso.
 ## Testes
 
 ```bash
-cd backend && dotnet test     # 95 testes
+cd backend && dotnet test     # 97 testes
 cd frontend && npm test       # 33 testes
 ```
 
-**95 no backend.** Os **64 de unidade** (xUnit + NSubstitute) cobrem o domínio sem mock algum
+**97 no backend.** Os **64 de unidade** (xUnit + NSubstitute) cobrem o domínio sem mock algum
 e verificam efeito, não só retorno: quando uma regra falha, o teste assere que `CommitAsync`
-**não** foi chamado. Os **31 de integração** (`WebApplicationFactory` + **Testcontainers**)
+**não** foi chamado. Os **33 de integração** (`WebApplicationFactory` + **Testcontainers**)
 sobem um PostgreSQL real — não se usa InMemory de propósito, porque ele não tem índice único,
 e é o índice que garante a unicidade de código e login.
 
 Alguns que valem destaque: o login roda BCrypt mesmo quando o usuário não existe, porque
-mensagem igual não bastaria se o tempo entregasse a diferença; a resposta de usuários nunca
-contém "senha" nem "hash"; remover colaborador inativa o usuário na mesma transação; renomear quem ficou numa unidade
+mensagem igual não bastaria se o tempo entregasse a diferença; nem a resposta de usuários nem a de
+colaboradores contém "senha" ou "hash", mesmo esta última carregando o usuário vinculado; remover colaborador inativa o usuário na mesma transação; renomear quem ficou numa unidade
 inativa continua possível, enquanto transferir alguém para ela é recusado; o filtro
 `semColaborador` some com o usuário assim que ele ganha colaborador, sem anular o filtro de
 status; e duas criações seguidas nunca recebem o mesmo código.
@@ -236,11 +236,12 @@ nenhuma estiver ativa, o campo explica o motivo. Na edição há uma exceção d
 unidade atual continua na lista mesmo inativa, senão editar só o nome moveria a pessoa de
 unidade sem querer.
 
-A regra 1:1 recebeu o mesmo tratamento, mas exigiu mexer na API. `ColaboradorRespostaDto` não
-expõe o `usuarioId`, então o portal não sabia quem já estava vinculado — e cruzar isso no
-cliente obrigaria a varrer todas as páginas de colaboradores. O filtro foi para onde a
-pergunta pertence: `GET /usuarios?semColaborador=true` vira um `EXISTS` no SQL, com a
-paginação recortando depois do filtro.
+A regra 1:1 recebeu o mesmo tratamento, mas exigiu mexer na API. A resposta de colaborador
+traz o usuário vinculado, o que torna a relação visível — mas não resolve o problema do
+formulário: para saber quem **ainda não** está vinculado, o cliente teria que varrer todas as
+páginas de colaboradores e subtrair. O filtro foi para onde a pergunta pertence:
+`GET /usuarios?semColaborador=true` vira um `EXISTS` no SQL, com a paginação recortando
+depois do filtro.
 
 O tratamento do 409 continua no código: filtrar é conveniência, não garantia — dois cadastros
 simultâneos ainda disputam o mesmo usuário. A autoridade fica no servidor.

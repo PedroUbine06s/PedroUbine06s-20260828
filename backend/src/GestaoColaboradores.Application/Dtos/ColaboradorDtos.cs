@@ -1,12 +1,19 @@
 namespace GestaoColaboradores.Application.Dtos;
 
+/// <summary>
+/// Todo colaborador tem um usuário, e a relação é 1:1 — por isso ele aparece aqui achatado,
+/// no mesmo formato da unidade: id, código e rótulo. Nunca a senha nem o hash.
+/// </summary>
 public record ColaboradorRespostaDto(
     Guid Id,
     string Codigo,
     string Nome,
     Guid UnidadeId,
     string CodigoUnidade,
-    string NomeUnidade);
+    string NomeUnidade,
+    Guid UsuarioId,
+    string CodigoUsuario,
+    string LoginUsuario);
 
 /// <summary>
 /// O código do colaborador é gerado pelo sistema (COL000001). A unidade e o usuário são

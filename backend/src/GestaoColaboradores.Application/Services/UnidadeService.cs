@@ -102,6 +102,9 @@ public class UnidadeService(
     private static UnidadeComColaboradoresDto ParaDtoComColaboradores(Unidade u) =>
         new(u.Id, u.Codigo, u.Nome, u.Ativo,
             u.Colaboradores
-                .Select(c => new ColaboradorRespostaDto(c.Id, c.Codigo, c.Nome, u.Id, u.Codigo, u.Nome))
+                .Select(c => new ColaboradorRespostaDto(
+                    c.Id, c.Codigo, c.Nome,
+                    u.Id, u.Codigo, u.Nome,
+                    c.Usuario.Id, c.Usuario.Codigo, c.Usuario.Login))
                 .ToList());
 }

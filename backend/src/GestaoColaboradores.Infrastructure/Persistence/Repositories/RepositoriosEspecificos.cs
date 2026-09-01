@@ -57,6 +57,7 @@ public class ColaboradorRepository(AppDbContext context) : Repository<Colaborado
 
         var itens = await Set.AsNoTracking()
             .Include(c => c.Unidade)
+            .Include(c => c.Usuario)
             .OrderBy(c => c.Nome)
             .Skip(paginacao.QuantidadeAPular)
             .Take(paginacao.Tamanho)
@@ -67,7 +68,9 @@ public class ColaboradorRepository(AppDbContext context) : Repository<Colaborado
 
     // Sem AsNoTracking, ao contrário da listagem: quem busca por id vai alterar.
     public Task<Colaborador?> ObterComUnidadeAsync(Guid id, CancellationToken ct = default) =>
-        Set.Include(c => c.Unidade).FirstOrDefaultAsync(c => c.Id == id, ct);
+        Set.Include(c => c.Unidade)
+           .Include(c => c.Usuario)
+           .FirstOrDefaultAsync(c => c.Id == id, ct);
 
     public Task<bool> ExisteParaUsuarioAsync(Guid usuarioId, CancellationToken ct = default) =>
         Set.AnyAsync(c => c.UsuarioId == usuarioId, ct);
@@ -76,7 +79,9 @@ public class ColaboradorRepository(AppDbContext context) : Repository<Colaborado
 public class UnidadeRepository(AppDbContext context) : Repository<Unidade>(context), IUnidadeRepository
 {
     public Task<Unidade?> ObterComColaboradoresAsync(Guid id, CancellationToken ct = default) =>
-        Set.Include(u => u.Colaboradores).FirstOrDefaultAsync(u => u.Id == id, ct);
+        Set.Include(u => u.Colaboradores)
+              .ThenInclude(c => c.Usuario)
+           .FirstOrDefaultAsync(u => u.Id == id, ct);
 
     public async Task<(List<Unidade> Itens, int Total)> ListarComColaboradoresPaginadoAsync(
         PaginacaoQuery paginacao, CancellationToken ct = default)
@@ -87,6 +92,7 @@ public class UnidadeRepository(AppDbContext context) : Repository<Unidade>(conte
         // são um detalhe da unidade e não uma coleção independente.
         var itens = await Set.AsNoTracking()
             .Include(u => u.Colaboradores)
+                .ThenInclude(c => c.Usuario)
             .OrderBy(u => u.Nome)
             .Skip(paginacao.QuantidadeAPular)
             .Take(paginacao.Tamanho)

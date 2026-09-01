@@ -89,6 +89,10 @@ export interface Colaborador {
   unidadeId: string;
   codigoUnidade: string;
   nomeUnidade: string;
+  /** Todo colaborador tem um usuário (1:1). A senha nunca vem — nem o hash. */
+  usuarioId: string;
+  codigoUsuario: string;
+  loginUsuario: string;
 }
 
 /**

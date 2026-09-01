@@ -37,6 +37,7 @@ import { ColaboradoresService } from './colaboradores.service';
             <th><span class="cds--table-header-label">Código</span></th>
             <th><span class="cds--table-header-label">Nome</span></th>
             <th><span class="cds--table-header-label">Unidade</span></th>
+            <th><span class="cds--table-header-label">Usuário</span></th>
             <th><span class="cds--table-header-label">Ações</span></th>
           </tr>
         </thead>
@@ -47,6 +48,9 @@ import { ColaboradoresService } from './colaboradores.service';
               <td>{{ c.nome }}</td>
               <td>
                 {{ c.nomeUnidade }} <span class="codigo">{{ c.codigoUnidade }}</span>
+              </td>
+              <td>
+                {{ c.loginUsuario }} <span class="codigo">{{ c.codigoUsuario }}</span>
               </td>
               <td class="acoes">
                 <button cdsButton="ghost" size="sm" (click)="abrirEdicao(c)">Editar</button>
