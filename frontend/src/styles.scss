@@ -7,6 +7,21 @@
   box-sizing: border-box;
 }
 
+/* Fechado, o Carbon ainda desenha um trilho de 48px que fica por cima do conteúdo e corta o
+   título. Só o expanded controla a visibilidade — usar também o input hidden fazia o atributo
+   nativo do DOM e a entrada do componente brigarem, e o painel abria sozinho. */
+.cds--side-nav:not(.cds--side-nav--expanded) {
+  display: none;
+}
+
+/* O painel e o cabeçalho têm o mesmo z-index, e como o painel vem depois no DOM ele vencia o
+   empate e cobria o hambúrguer — abria e não dava para fechar pelo mesmo botão. Começando
+   abaixo do cabeçalho, o botão continua alcançável e vira o X de fechar. */
+.cds--side-nav {
+  top: 3rem;
+  height: calc(100% - 3rem);
+}
+
 /* Os itens do side nav não têm ícone, e sem ele o Carbon deixa o rótulo espremido em 96px,
    cortando "Colaboradores" com reticências. Some com a caixa vazia do ícone e devolve a
    largura ao texto. */

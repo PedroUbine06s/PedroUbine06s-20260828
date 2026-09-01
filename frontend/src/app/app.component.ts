@@ -46,9 +46,7 @@ import { NotificacoesComponent } from './shared/notificacoes.component';
 
       <!-- Mesma lista de rotas, para telas estreitas. Fechar ao navegar é obrigatório: o
            roteamento não recarrega a página, então o painel ficaria aberto por cima. -->
-      <!-- hidden fecha o trilho recolhido de 48px que o Carbon deixa por cima do
-           conteúdo quando o painel está fechado. -->
-      <cds-sidenav [expanded]="menuAberto()" [hidden]="!menuAberto()">
+      <cds-sidenav [expanded]="menuAberto()">
         @for (item of navegacao; track item.rota) {
           <cds-sidenav-item
             [route]="[item.rota]"
